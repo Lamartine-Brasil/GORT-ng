@@ -531,6 +531,9 @@ public static class P
     /// <summary>P-119 — Quantidade de atalhos dedicados a abrir perfil. [Exposto: FIXO]</summary>
     public const int ProfileShortcutCount = 4;
 
+    /// <summary>RF-442 — Máximo de teclas por combinação. [Exposto: FIXO]</summary>
+    public const int MaxShortcutKeys = 3;
+
     /// <summary>P-120 — Verificações de janela ativa antes do instantâneo (RF-452). [CALIBRADO] [Exposto: FIXO]</summary>
     public const int SnapshotForegroundChecks = 15;
     /// <summary>P-121 — Intervalo entre essas verificações. [CALIBRADO] [Exposto: FIXO]</summary>

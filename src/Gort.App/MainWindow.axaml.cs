@@ -1,9 +1,16 @@
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Gort.App.Windows;
 using Gort.Core.Caching;
 using Gort.Core.Regions;
+using Gort.Core.Shortcuts;
+using Gort.Platform.Input;
+
+// Só o tipo de que este arquivo precisa de Gort.Core.Model: importar o espaço inteiro
+// traria `Rect`, que colide com o do Avalonia.
+using ShortcutAction = Gort.Core.Model.ShortcutAction;
 using Gort.Engine;
 using Gort.Core.Structuring;
 using Gort.Platform.Capabilities;
@@ -23,6 +30,7 @@ public partial class MainWindow : Window
     private DarkTranslationWindow? _translationWindow;
     private readonly TranslationLoop _loop;
     private readonly DisplayMemory _displayMemory = new();
+    private RemoteControlWindow? _remote;
     private bool _busy;
 
     public MainWindow() : this(AppSession.Create()) { }
@@ -33,11 +41,13 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _loop = BuildLoop();
+        SetUpShortcuts();
 
         Subtitle.Text = $"{_session.Platform.PlatformName} · " +
                         $"{_session.Platform.Monitors.Monitors.Count} monitor(es)";
 
         ShowCapabilities();
+        ShowNotices();
         FillChoices();
         ShowAreas();
 
@@ -93,6 +103,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// RF-569 / RF-028 — Os avisos da inicialização são exibidos UMA VEZ.
+    /// </summary>
+    private void ShowNotices()
+    {
+        if (_session.Notices.Count == 0) return;
+        CapabilityText.Text += "\n\n" + string.Join("\n", _session.Notices);
+        _session.Notices.Clear();
+    }
+
+    /// <summary>
     /// RF-120 / RF-511 — As listas contêm apenas o que está disponível e o que cada serviço
     /// suporta. RF-313 — o idioma de destino padrão aparece em primeiro lugar.
     /// </summary>
@@ -128,10 +148,20 @@ public partial class MainWindow : Window
             _session.Regions.HasAnyIncrementalArea && _session.Platform.Capabilities.CanTranslate;
     }
 
-    /// <summary>RF-558 — O consumo de memória fica à vista, sem abrir diálogo.</summary>
+    /// <summary>
+    /// RF-558 — O consumo de memória fica à vista, sem abrir diálogo.
+    ///
+    /// A medida é o CONJUNTO DE TRABALHO, e não a memória privada: fora do Windows, a
+    /// memória privada é devolvida como zero pelo runtime, e um indicador que marca zero
+    /// para sempre é pior que indicador nenhum — ele daria a impressão de que não há
+    /// consumo a acompanhar, que é justamente o contrário do que RF-558 quer.
+    /// </summary>
     private void ShowMemory()
     {
-        long bytes = Process.GetCurrentProcess().PrivateMemorySize64;
+        using var process = Process.GetCurrentProcess();
+        long bytes = process.WorkingSet64;
+        if (bytes <= 0) bytes = GC.GetTotalMemory(false);
+
         MemoryIndicator.Text = $"memória: {bytes / 1024 / 1024} MB";
     }
 
@@ -144,12 +174,19 @@ public partial class MainWindow : Window
         var desktop = MonitorGeometry.VirtualDesktop(monitors);
 
         Hide();   // a janela principal sairia na captura da própria área
+
+        // RF-053 / RF-443 — enquanto a camada de seleção está aberta, os atalhos globais
+        // ficam inertes: o usuário está usando o teclado e o mouse para marcar a área.
+        _session.Dispatcher.Suspended = true;
         await Task.Delay(150);
 
         var overlay = new AreaSelectionOverlay(desktop,
                                                _session.Advanced.SelectionHighlight,
                                                _session.Advanced.SelectionBackground);
         var drawn = await overlay.SelectAsync();
+
+        _session.Dispatcher.Suspended = false;
+        _session.Dispatcher.Reset();
 
         Show();
         Activate();
@@ -214,6 +251,109 @@ public partial class MainWindow : Window
         {
             _busy = false;
             TranslateOnceButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// RF-436 — Instala o interceptador global e liga o controle remoto.
+    ///
+    /// RF-569 — Quando os atalhos globais não estão disponíveis, o usuário opera pelo
+    /// controle remoto, e o programa informa isso UMA VEZ.
+    /// </summary>
+    private void SetUpShortcuts()
+    {
+        var keyboard = _session.Platform.Keyboard;
+
+        if (keyboard.Start())
+        {
+            keyboard.KeyChanged += OnGlobalKey;
+        }
+        else if (keyboard.UnavailableReason is not null)
+        {
+            _session.Notices.Add(keyboard.UnavailableReason);
+        }
+
+        // O controle remoto existe sempre: ele é a alternativa aos atalhos, e também o modo
+        // normal de operar sem voltar à janela principal.
+        _remote = new RemoteControlWindow
+        {
+            DefineArea = () => _ = DefineAreaAsync(),
+            Snapshot = () => _ = TranslateOnceAsync(),
+            Start = ToggleLoop,
+            Stop = ToggleLoop,
+            OpenSettings = () => { Show(); Activate(); },
+        };
+        _remote.SetAlwaysOnTop(_session.Advanced.RemoteAlwaysOnTop);
+        PlaceRemote(_remote);
+        _remote.Show();
+    }
+
+    /// <summary>
+    /// RF-517 — O controle remoto tem de estar SEMPRE ACESSÍVEL. Sem uma posição explícita
+    /// ele nasce no canto superior esquerdo, onde costuma ficar debaixo da janela que o
+    /// usuário está traduzindo. A posição inicial é a base do monitor principal, longe do
+    /// conteúdo e perto de onde a mão já está.
+    /// </summary>
+    private void PlaceRemote(RemoteControlWindow remote)
+    {
+        var monitors = _session.Platform.Monitors.Monitors;
+        var primary = monitors.FirstOrDefault(m => m.IsPrimary) ?? monitors.FirstOrDefault();
+        if (primary is null) return;
+
+        int width = (int)remote.Width;
+        int height = (int)remote.Height;
+
+        remote.Position = new PixelPoint(
+            primary.Bounds.Left + (primary.Bounds.Width - width) / 2,
+            primary.Bounds.Bottom - height - 90);
+    }
+
+    /// <summary>
+    /// Uma tecla do sistema inteiro. O tratamento tem de devolver DEPRESSA: o sistema remove
+    /// um interceptador que fique preso, e isso mataria todos os atalhos (RF-011).
+    /// </summary>
+    private void OnGlobalKey(KeyEvent e)
+    {
+        if (!e.IsDown)
+        {
+            _session.Dispatcher.KeyUp(e.Key);
+            return;
+        }
+
+        var shortcut = _session.Dispatcher.KeyDown(e.Key);
+        if (shortcut is null) return;
+
+        // A ação vai para a thread de interface; o gancho volta imediatamente.
+        Dispatcher.UIThread.Post(() => Run(shortcut.Action));
+    }
+
+    /// <summary>RF-444 / RF-447 — O que cada atalho dispara.</summary>
+    private void Run(ShortcutAction action)
+    {
+        switch (action)
+        {
+            case ShortcutAction.ToggleRealtimeTranslation:
+                // RF-450 — vindo do interceptador, a parada usa o prazo curto P-04.
+                if (_loop.IsRunning) { _loop.StopFromKeyboardHook(); ShowLoopState(); }
+                else ToggleLoop();
+                break;
+
+            case ShortcutAction.TranslateOnce:
+                // RF-451 — com o laço rodando, pausa e executa um ciclo pontual, também com
+                // prazo curto.
+                if (_loop.IsRunning) _loop.StopFromKeyboardHook();
+                _ = TranslateOnceAsync();
+                break;
+
+            case ShortcutAction.QuickArea:
+            case ShortcutAction.SnapshotArea:
+                _ = DefineAreaAsync();
+                break;
+
+            case ShortcutAction.ToggleTranslationWindow:
+                if (_translationWindow is { IsVisible: true }) _translationWindow.Hide();
+                else TranslationWindow().Show();
+                break;
         }
     }
 
@@ -342,6 +482,7 @@ public partial class MainWindow : Window
         TranslateLoopButton.Content = running ? "Parar tradução" : "Iniciar tradução";
         TranslateOnceButton.IsEnabled = !running && _session.Regions.HasAnyIncrementalArea;
         _translationWindow?.SetRunning(running);
+        _remote?.SetRunning(running);
 
         // RF-320 — "sempre no topo apenas durante a tradução".
         if (_session.Advanced.AlwaysOnTopOnlyWhileTranslating)
@@ -406,8 +547,16 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        // RF-016 — ao encerrar de fato, o laço para antes de tudo.
+        // RF-016 — ao encerrar de fato: parar o laço, liberar o interceptador global de
+        // teclado e fechar as janelas auxiliares.
         _loop.Stop();
+        _session.Platform.Keyboard.Stop();
+
+        if (_remote is not null)
+        {
+            _remote.AllowClose = true;
+            _remote.Close();
+        }
 
         // A janela de tradução se recusa a fechar por conta de RF-326; ao encerrar o
         // programa de verdade, essa recusa tem de ser suspensa.

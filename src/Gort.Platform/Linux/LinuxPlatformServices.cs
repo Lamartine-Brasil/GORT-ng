@@ -237,6 +237,15 @@ internal sealed class LinuxPlatformServices : IPlatformServices
     public ScreenCapture Capture { get; }
     public IMonitorProvider Monitors { get; }
 
+    /// <summary>
+    /// C10 — Será ligado com a implementação específica desta plataforma; até lá, o gancho
+    /// é inerte e explica o motivo, e o usuário opera pelo controle remoto (RF-569).
+    /// Sob Wayland, C10 exige um portal com consentimento explícito (RF-568).
+    /// </summary>
+    public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; } =
+        new Gort.Platform.Input.InactiveKeyboardHook(
+            "O interceptador global de teclado ainda não está ligado nesta plataforma.");
+
     /// <summary>RF-568 — A sessão gráfica muda o que é possível.</summary>
     internal static bool IsWayland
         => string.Equals(Environment.GetEnvironmentVariable("XDG_SESSION_TYPE"),

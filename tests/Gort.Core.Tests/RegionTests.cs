@@ -1,6 +1,7 @@
 using Gort.Core.Calibration;
 using Gort.Core.Model;
 using Gort.Core.Regions;
+using Gort.Core.Ui;
 using Xunit;
 
 namespace Gort.Core.Tests;
@@ -666,4 +667,115 @@ internal static class RegionManagerTestExtensions
 {
     public static IReadOnlyList<Rect> ExclusionsInRegionZero(this RegionManager m)
         => m.Build().ExclusionsIn(0);
+}
+
+/// <summary>RF-518 / RF-519 — Geometria do controle remoto.</summary>
+public class RemoteControlGeometryTests
+{
+    private static readonly Rect Original = new(100, 100, 200, 100);   // proporção 2:1
+
+    /// <summary>
+    /// RF-518 — Ao redimensionar por UMA BORDA, a outra dimensão é derivada da proporção.
+    /// </summary>
+    [Fact]
+    public void RF_518_arrastar_a_borda_direita_deriva_a_altura_da_proporcao()
+    {
+        var r = RemoteControlGeometry.Resize(Original, ResizeEdge.Right, 100, 0);
+
+        Assert.Equal(300, r.Width);
+        Assert.Equal(150, r.Height);   // proporção 2:1 mantida
+        Assert.Equal(100, r.X);        // a borda esquerda não se moveu
+    }
+
+    [Fact]
+    public void RF_518_arrastar_a_borda_inferior_deriva_a_largura_da_proporcao()
+    {
+        var r = RemoteControlGeometry.Resize(Original, ResizeEdge.Bottom, 0, 50);
+
+        Assert.Equal(300, r.Width);
+        Assert.Equal(150, r.Height);
+    }
+
+    /// <summary>
+    /// RF-518 — Ao redimensionar por um CANTO, usa-se o MAIOR fator dos dois eixos.
+    /// </summary>
+    [Fact]
+    public void RF_518_no_canto_vence_o_maior_fator_dos_dois_eixos()
+    {
+        // O eixo X pede largura 250; o eixo Y pede altura 200, ou seja, largura 400.
+        var r = RemoteControlGeometry.Resize(Original, ResizeEdge.BottomRight, 50, 100);
+
+        Assert.Equal(400, r.Width);
+        Assert.Equal(200, r.Height);
+    }
+
+    /// <summary>
+    /// As bordas esquerda e superior movem a ORIGEM, para que a borda oposta fique parada —
+    /// do contrário a janela escaparia debaixo do cursor.
+    /// </summary>
+    [Fact]
+    public void RF_518_a_borda_esquerda_move_a_origem_e_mantem_a_direita_parada()
+    {
+        var r = RemoteControlGeometry.Resize(Original, ResizeEdge.Left, -100, 0);
+
+        Assert.Equal(300, r.Width);
+        Assert.Equal(Original.Right, r.Right);
+    }
+
+    [Fact]
+    public void RF_518_a_borda_superior_mantem_a_inferior_parada()
+    {
+        var r = RemoteControlGeometry.Resize(Original, ResizeEdge.Top, 0, -50);
+        Assert.Equal(Original.Bottom, r.Bottom);
+    }
+
+    [Fact]
+    public void A_proporcao_e_preservada_em_qualquer_borda()
+    {
+        double esperado = (double)Original.Height / Original.Width;
+
+        foreach (var edge in new[]
+        {
+            ResizeEdge.Left, ResizeEdge.Right, ResizeEdge.Top, ResizeEdge.Bottom,
+            ResizeEdge.TopLeft, ResizeEdge.TopRight,
+            ResizeEdge.BottomLeft, ResizeEdge.BottomRight,
+        })
+        {
+            var r = RemoteControlGeometry.Resize(Original, edge, 70, 40);
+            Assert.Equal(esperado, (double)r.Height / r.Width, 2);
+        }
+    }
+
+    [Fact]
+    public void A_janela_nao_encolhe_abaixo_do_minimo()
+    {
+        var r = RemoteControlGeometry.Resize(Original, ResizeEdge.Right, -1000, 0);
+        Assert.Equal(RemoteControlGeometry.MinimumWidth, r.Width);
+    }
+
+    [Fact]
+    public void Sem_borda_o_retangulo_nao_muda()
+        => Assert.Equal(Original, RemoteControlGeometry.Resize(Original, ResizeEdge.None, 50, 50));
+
+    /// <summary>RF-519 — Os controles internos escalam proporcionalmente.</summary>
+    [Fact]
+    public void RF_519_a_escala_do_conteudo_acompanha_a_largura()
+    {
+        Assert.Equal(1.0, RemoteControlGeometry.ContentScale(200, 200));
+        Assert.Equal(2.0, RemoteControlGeometry.ContentScale(400, 200));
+        Assert.Equal(0.5, RemoteControlGeometry.ContentScale(100, 200));
+    }
+
+    /// <summary>
+    /// RF-518 — No miolo o gesto é ARRASTAR a janela, não redimensionar: ela é movível por
+    /// qualquer ponto.
+    /// </summary>
+    [Fact]
+    public void No_miolo_nao_ha_borda_e_o_gesto_e_arrastar()
+    {
+        Assert.Equal(ResizeEdge.None, RemoteControlGeometry.EdgeAt(100, 50, 200, 100, 8));
+        Assert.Equal(ResizeEdge.Right, RemoteControlGeometry.EdgeAt(196, 50, 200, 100, 8));
+        Assert.Equal(ResizeEdge.TopLeft, RemoteControlGeometry.EdgeAt(2, 2, 200, 100, 8));
+        Assert.Equal(ResizeEdge.BottomRight, RemoteControlGeometry.EdgeAt(198, 98, 200, 100, 8));
+    }
 }

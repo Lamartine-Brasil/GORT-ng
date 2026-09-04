@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.RemoteControlWindow"
+        Title="Controle remoto"
+        Width="280" Height="72"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        CanResize="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent">
+
+  <Border Background="#E61E1E22" CornerRadius="8" BorderBrush="#4A4A52" BorderThickness="1">
+    <Viewbox x:Name="Scaler" Stretch="Uniform" Margin="8">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button x:Name="AreaButton" Content="Área" Padding="12,7"
+                ToolTip.Tip="Definir área de OCR" />
+        <Button x:Name="SnapshotButton" Content="Instantâneo" Padding="12,7"
+                ToolTip.Tip="Traduzir um retângulo desenhado na hora" />
+        <Button x:Name="StartButton" Content="Iniciar" Padding="12,7"
+                ToolTip.Tip="Iniciar a tradução" />
+        <Button x:Name="StopButton" Content="Parar" Padding="12,7" IsVisible="False"
+                ToolTip.Tip="Parar a tradução" />
+        <Button x:Name="SettingsButton" Content="Config." Padding="12,7"
+                ToolTip.Tip="Abrir configurações" />
+        <Button x:Name="MinimizeButton" Content="—" Padding="12,7"
+                ToolTip.Tip="Minimizar" />
+      </StackPanel>
+    </Viewbox>
+  </Border>
+</Window>

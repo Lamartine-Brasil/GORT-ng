@@ -4,6 +4,7 @@ using Gort.Core.Configuration;
 using Gort.Core.Imaging;
 using Gort.Core.Ocr;
 using Gort.Core.Regions;
+using Gort.Core.Shortcuts;
 using Gort.Core.Structuring;
 using Gort.Core.Translation;
 using Gort.Core.Translation.Services;
@@ -44,6 +45,10 @@ public sealed class AppSession : IDisposable
                          profile.AreaColorGroups.Select(g => (IReadOnlyList<bool>)g).ToList());
         Regions.MouseFollowOnly = advanced.MouseFollowOnly;
 
+        // RF-037 / RF-453 — os atalhos vêm do seu próprio arquivo.
+        Shortcuts = ShortcutStore.Load(paths.Shortcuts);
+        Dispatcher = new ShortcutDispatcher(Shortcuts);
+
         Pipeline = new TranslationPipeline();
         Cycle = new TranslationCycle(Platform.Capture, Pipeline);
 
@@ -58,6 +63,8 @@ public sealed class AppSession : IDisposable
     public IPlatformServices Platform { get; }
     public OcrEngineRegistry Engines { get; }
     public RegionManager Regions { get; }
+    public ShortcutSet Shortcuts { get; }
+    public ShortcutDispatcher Dispatcher { get; }
     public TranslationPipeline Pipeline { get; }
     public TranslationCycle Cycle { get; }
 
@@ -197,6 +204,9 @@ public sealed class AppSession : IDisposable
             NeedsOriginalImage = Profile.WindowMode == WindowMode.Overlay && Advanced.AutoColor,
         };
     }
+
+    /// <summary>RF-453 — Os atalhos são gravados no seu arquivo ao aplicar (RF-012).</summary>
+    public void SaveShortcuts() => ShortcutStore.Save(Paths.Shortcuts, Shortcuts);
 
     /// <summary>RF-020 — O perfil principal é salvo sempre que o usuário aplica configurações.</summary>
     public void SaveProfile()

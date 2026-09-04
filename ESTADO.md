@@ -22,7 +22,7 @@ Gort.sln
 │   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
 │   └── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 └── tests/
-    ├── Gort.Core.Tests/        322 testes
+    ├── Gort.Core.Tests/        372 testes
     ├── Gort.Platform.Tests/     27 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
@@ -39,6 +39,7 @@ Gort.sln
 | **5 — Um motor de OCR** | RF-120, RF-121, RF-141 a RF-146 | **Completa e verificada** em texto real de tela. Detecção DBNet e reconhecimento CRNN com decodificação CTC, em inglês e japonês. |
 | **7 — Um serviço de tradução e o modo escuro** | RF-225 a RF-248, RF-308 a RF-331 | **Completa.** É o *primeiro produto utilizável de ponta a ponta*: captura, reconhece, traduz e mostra numa janela. |
 | **8 — Laço, controle e detecção de mudança 🔒** | RF-004, RF-005, RF-009 a RF-014, RF-192 a RF-205, RF-547 a RF-551 | **Completa.** Tradução contínua, protocolo de pausa e os três critérios de aceite do capítulo 9 verificados. |
+| **9 — Atalhos e controle remoto** | RF-436 a RF-453, RF-517 a RF-522 | **Lógica completa e verificada.** O controle remoto funciona; os atalhos globais dependem de permissão de Acessibilidade, ausente nesta máquina. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -61,7 +62,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 9 — Atalhos e controle remoto | RF-436 a RF-453, RF-517 a RF-522 | |
 | 11 — Modo camada | RF-007, RF-332 a RF-343, RF-387 a RF-391 | |
 | 12 — Modo sobreposição, layout | RF-344 a RF-386, RF-392 | Colisões, tamanho automático de fonte, quebra por caractere. |
 | 14 — Demais motores de OCR | RF-122 a RF-140, RF-147 a RF-151 | |
@@ -195,6 +195,26 @@ Os três critérios de aceite do capítulo 9 estão verificados em teste:
 capítulo 9 não faz — ele devolve falso nos dois casos. RF-012 exige que o chamador seja
 informado de que **nada foi aplicado**, e um único booleano não diz isso.
 
+## Atalhos e controle remoto
+
+A lógica dos atalhos é independente de plataforma e está inteiramente testada: normalização
+das variantes esquerda/direita (RF-437), correspondência por conjunto sem ordem (RF-438),
+duplicatas aceitas em silêncio com ordem de verificação estável (RF-439), repetição
+automática ignorada (RF-440) e atalho vazio válido (RF-446).
+
+**A ordem de verificação que RF-439 manda documentar** é a ordem de declaração de
+`ShortcutAction` e, dentro de cada ação, o índice crescente.
+
+**Os atalhos globais não puderam ser verificados nesta máquina.** C10 no macOS exige
+permissão de Acessibilidade, e ela está ausente. O gancho por interceptação de eventos está
+escrito — em modo apenas observação, para que as teclas sigam intactas para o jogo — mas
+não foi executado. A degradação de RF-569 está no lugar e foi verificada em tela: o programa
+informa *"O macOS exige permissão de Acessibilidade… Sem ela, use o controle remoto"*.
+
+O controle remoto **funciona e foi verificado**: `Área · Instantâneo · Iniciar · Config. · —`,
+com iniciar e parar ocupando o mesmo lugar (RF-517), movível por qualquer ponto e
+redimensionável mantendo a proporção (RF-518).
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -256,7 +276,18 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     dos demais endereços do programa (RF-513). Os identificadores de cliente de alta e de
     baixa qualidade de RF-245 também.
 
-12. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+12. **Indicador de memória (RF-558).** Mede o CONJUNTO DE TRABALHO, não a memória privada.
+    Fora do Windows o runtime devolve zero para a memória privada, e um indicador que marca
+    zero para sempre é pior que indicador nenhum: daria a impressão de que não há consumo a
+    acompanhar, que é o contrário do que o requisito quer. Descoberto rodando a aplicação —
+    ela mostrava "memória: 0 MB".
+
+13. **Posição inicial do controle remoto.** Explícita, na base do monitor principal. Sem
+    ela a janela nasce no canto superior esquerdo, que é justamente onde costuma ficar
+    debaixo da janela que o usuário está traduzindo — e RF-517 exige que ela esteja
+    *sempre acessível*.
+
+14. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.

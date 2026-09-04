@@ -30,6 +30,12 @@ public interface IPlatformServices : IDisposable
     IMonitorProvider Monitors { get; }
 
     /// <summary>
+    /// C10 — Atalho global de teclado. Quando indisponível, o gancho é inerte e explica o
+    /// motivo; o usuário opera pelo controle remoto (RF-569).
+    /// </summary>
+    Input.IGlobalKeyboardHook Keyboard { get; }
+
+    /// <summary>
     /// RF-569 — Solicita ao sistema uma permissão que falta, o que faz o sistema exibir o
     /// pedido ao usuário. Devolve a nova situação da capacidade.
     ///
@@ -85,6 +91,9 @@ internal sealed class UnsupportedPlatformServices : IPlatformServices
     public ScreenCapture Capture { get; } = new(new NullCaptureBackend());
 
     public IMonitorProvider Monitors { get; } = new NullMonitorProvider();
+
+    public Input.IGlobalKeyboardHook Keyboard { get; } = new Input.InactiveKeyboardHook(
+        "Este sistema operacional ainda não tem implementação da camada de plataforma.");
 
     public CapabilityStatus RequestPermission(Capability capability) => Capabilities[capability];
 

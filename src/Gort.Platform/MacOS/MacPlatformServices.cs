@@ -23,12 +23,20 @@ internal sealed class MacPlatformServices : IPlatformServices
         Monitors = new MacMonitorProvider();
         Capture = new ScreenCapture(_backend, Monitors);
         Capabilities = Detect(Monitors);
+
+        // RF-569 — sem a permissão de Acessibilidade, o gancho não é sequer tentado: a
+        // capacidade já foi reportada indisponível e o usuário opera pelo controle remoto.
+        Keyboard = Capabilities.Has(Capability.GlobalHotkeys)
+            ? new MacKeyboardHook()
+            : new Gort.Platform.Input.InactiveKeyboardHook(
+                Capabilities[Capability.GlobalHotkeys].Explanation);
     }
 
     public string PlatformName => "macOS";
     public CapabilityReport Capabilities { get; private set; }
     public ScreenCapture Capture { get; }
     public IMonitorProvider Monitors { get; }
+    public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; }
 
     /// <summary>RF-576 — Tudo apurado uma única vez, na inicialização.</summary>
     private static CapabilityReport Detect(IMonitorProvider monitors)
@@ -176,11 +184,20 @@ internal sealed class MacPlatformServices : IPlatformServices
     }
 
     /// <summary>
-    /// A verificação de acessibilidade fica com quem implementa C10; até a Etapa 9, o
-    /// estado é apurado de forma conservadora: assume-se ausente, o que apenas desabilita
-    /// os atalhos globais e sugere o controle remoto (degradação aceitável de RF-569).
+    /// RF-569 — A permissão de Acessibilidade, verificada SEM ser solicitada, para que a
+    /// ausência seja detectada na inicialização (RF-576).
     /// </summary>
-    private static bool HasAccessibilityPermission() => false;
+    private static bool HasAccessibilityPermission()
+    {
+        try
+        {
+            return MacInput.AXIsProcessTrusted();
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     public CapabilityStatus RequestPermission(Capability capability)
     {
@@ -228,5 +245,9 @@ internal sealed class MacPlatformServices : IPlatformServices
         }
     }
 
-    public void Dispose() => _backend.Dispose();
+    public void Dispose()
+    {
+        Keyboard.Dispose();
+        _backend.Dispose();
+    }
 }
