@@ -116,3 +116,29 @@ public sealed class LlmCatalog
     public bool IsPro(string model)
         => model.Contains(ProMarker, StringComparison.OrdinalIgnoreCase);
 }
+
+/// <summary>
+/// RF-029 — Modelos do motor de reconhecimento moderno, por idioma. É DADO: acrescentar um
+/// idioma ao motor é acrescentar uma entrada nos arquivos de configuração e pôr o modelo na
+/// pasta, sem tocar em código (RF-566).
+/// </summary>
+public sealed class ModernOcrModels
+{
+    /// <summary>
+    /// Modelo de detecção, comum a todos os idiomas: ele acha ONDE há texto, não O QUE está
+    /// escrito.
+    /// </summary>
+    public required string Detection { get; init; }
+
+    /// <summary>Reconhecedor de cada idioma, por identificador do catálogo.</summary>
+    public required IReadOnlyDictionary<string, RecognitionModel> Recognition { get; init; }
+
+    public RecognitionModel? For(string languageKey)
+        => Recognition.TryGetValue(languageKey, out var m) ? m : null;
+
+    /// <summary>Idiomas efetivamente atendidos por algum reconhecedor.</summary>
+    public IEnumerable<string> Languages => Recognition.Keys;
+}
+
+/// <summary>Um reconhecedor e, quando necessário, o seu dicionário de caracteres.</summary>
+public sealed record RecognitionModel(string Model, string? Dictionary);

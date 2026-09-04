@@ -13,12 +13,15 @@ Gort.sln
 │   └── engines.toml            motores de OCR, serviços, modelos, fontes, links
 ├── src/
 │   ├── Gort.Core/              todo o pipeline, sem nenhuma dependência de plataforma
-│   └── Gort.Platform/          abstração C1–C20 (RF-577), uma implementação por sistema
+│   ├── Gort.Platform/          abstração C1–C20 (RF-577), uma implementação por sistema
+│   └── Gort.Ocr.Rapid/         motor de OCR do Apêndice A (ONNX Runtime + RapidOCR)
 ├── tools/
-│   └── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
+│   ├── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
+│   └── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
 └── tests/
-    ├── Gort.Core.Tests/        275 testes
+    ├── Gort.Core.Tests/        288 testes
     ├── Gort.Platform.Tests/     27 testes
+    ├── Gort.Ocr.Tests/          36 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
 
@@ -29,6 +32,7 @@ Gort.sln
 | **1 — Esqueleto e configuração** | RF-020 a RF-046 | **Persistência completa.** Falta o ciclo de vida da aplicação (RF-001 a RF-019), que depende da interface. |
 | **2 — Abstração de plataforma e captura** | RF-088, RF-100, RF-568 a RF-578 | **Completa.** C1 e C18 implementados nos três sistemas; captura verificada de ponta a ponta no macOS. |
 | **3 — Regiões de captura** | RF-047 a RF-087 | **Modelo e geometria completos** e verificados: conversão moldura→retângulo com escala por monitor, alinhamento de largura, composição, áreas especiais e a regra de índice reversa. Falta o desenho das molduras e da camada de seleção (RF-047 a RF-056, RF-063, RF-080 a RF-084), que depende da interface. |
+| **5 — Um motor de OCR** | RF-120, RF-121, RF-141 a RF-146 | **Completa e verificada** em texto real de tela. Detecção DBNet e reconhecimento CRNN com decodificação CTC, em inglês e japonês. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -51,7 +55,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 5 — Um motor de OCR | RF-120, RF-121, RF-141 a RF-146 | RapidOCR sobre ONNX Runtime. |
 | 7 — Um serviço de tradução e o modo escuro | RF-225 a RF-248, RF-317 a RF-331 | **Primeiro produto utilizável de ponta a ponta.** |
 | 8 — Laço, controle e detecção de mudança | RF-004, RF-005, RF-009 a RF-014, RF-547 a RF-551 | A detecção já existe; falta o laço e o protocolo de pausa. |
 | 9 — Atalhos e controle remoto | RF-436 a RF-453, RF-517 a RF-522 | |
@@ -76,10 +79,22 @@ sistema operacional (RF-577).
 | **Windows** | GDI (`BitBlt` + `CreateDIBSection`) | `EnumDisplayMonitors` + `GetDpiForMonitor` | Compila; **não executada aqui** — falta uma máquina Windows. |
 | **Linux/X11** | `XGetImage` | Xinerama | Compila; **não executada aqui**. Sob Wayland a sessão é detectada e C1/C5/C10/C12 são reportadas indisponíveis com a explicação de RF-568. |
 
-**Latência (VII.1).** Uma caixa de diálogo típica de 800 × 200 px custa **16,8 ms de
-mediana** para capturar, 5,6% do orçamento de 300 ms de P-05. O pré-processamento completo
-de uma região de 796 × 277 — filtro HSV, erosão e ampliação 2× — custa outros **12 ms**. O
-resto do ciclo, que é dominado pelo OCR e pela tradução, tem folga.
+**Latência (VII.1).** Orçamento de P-05 é 300 ms para o ciclo inteiro quando a tradução vem
+do cache. Medido numa captura real de 796 × 277:
+
+| Etapa | Custo |
+|---|---|
+| Captura (C1) | 16,8 ms |
+| Pré-processamento — filtro HSV, erosão, ampliação 2× | 12 ms |
+| OCR — detecção | 49 ms |
+| OCR — reconhecimento | ~14 ms **por linha** |
+
+O reconhecimento é por linha, então o custo cresce com a quantidade de texto: uma caixa de
+diálogo de 2 a 4 linhas fica em torno de 110 ms de total, com folga; uma tela inteira de
+IDE com 23 linhas passa de 400 ms e estoura o orçamento. O alvo do produto é a caixa de
+diálogo, e é para ela que a área de OCR existe. Se for preciso mais margem, o caminho é
+processar as linhas em lote — o modelo de referência agrupa de 6 em 6 —, o que ainda não
+foi feito.
 
 **Permissões no macOS (RF-569).** `CGPreflightScreenCaptureAccess` dá falso negativo quando
 o programa roda sob um processo responsável já autorizado (um terminal, um ambiente de
@@ -107,6 +122,29 @@ invisível para o OCR**, indistinguível do fundo.
 A opção `--ignorar-permissao` existe só nessa ferramenta, para distinguir "a ligação nativa
 está errada" de "falta a permissão do sistema"; o programa em si obedece a RF-569 e não
 inicia sem a permissão.
+
+## O motor de OCR
+
+`Gort.Ocr.Rapid` implementa o contrato de 6.4 com o stack do Apêndice A. Detecção DBNet
+(acha **onde** há texto), reconhecimento CRNN com decodificação CTC gulosa (acha **o que**
+está escrito). O pós-processamento do detector — binarização, dilatação, componentes
+conectadas, casco convexo, retângulo de área mínima, pontuação e expansão — é próprio, sem
+dependência de biblioteca de visão computacional.
+
+Os modelos ficam em `modelos/` e **não entram no versionamento**; `modelos/LEIAME.md`
+explica como obtê-los. Qual modelo atende qual idioma é **dado**, em
+`data/engines.toml` → `[modern_ocr]` (RF-029).
+
+**O japonês precisa de modelo próprio.** O modelo chinês cobre kanji, latino e pontuação
+japonesa, mas tem **1 de 46 hiraganas e 3 de 46 katakanas**. Como kana é a maior parte de
+uma frase japonesa, texto japonês sairia ilegível com ele — e RF-309 põe o japonês no
+escopo. Verificado contando a cobertura do dicionário de cada modelo.
+
+**Verificado:** inglês lido corretamente de uma captura real de tela; o modelo japonês
+carregado com dicionário externo e lendo latino corretamente, o que confirma que o
+mapeamento índice → caractere está alinhado (um erro de um índice produziria lixo). A
+acurácia em texto japonês de verdade ainda **não foi medida** — falta conteúdo japonês em
+tela para comparar.
 
 ## Decisões registradas
 
@@ -145,7 +183,22 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
    conteúdo é barato; deixar a moldura entrar na imagem faz o OCR inventar caracteres na
    borda. (O arredondamento padrão do .NET levaria 3 × 1,5 = 4,5 para 4, não para 5.)
 
-8. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+8. **Piso de ampliação do detector.** O padrão de referência do modelo leva o lado menor a
+   736 px, pensado para fotografias. Aqui ele é 320, por medição: o programa já amplia por
+   P-22 antes do OCR, e RF-113 diz que essa é "o ajuste de maior impacto na taxa de acerto
+   com fontes pequenas". Aplicar 736 por cima de P-22 amplia duas vezes — a detecção subia
+   de 49 para 93 ms sem reconhecer nenhuma linha a mais. Pior que o custo: uma segunda
+   ampliação escondida dentro do motor tornaria o efeito de P-22 inexplicável para quem mexe
+   no controle. Em região pequena, onde o piso ainda importa, 320 acha as mesmas regiões que
+   736 em 18 ms em vez de 80. **Não é um valor 🔒** — é padrão de biblioteca, e a PARTE XII
+   não se aplica a ele; P-22 permanece intocado.
+
+9. **Recorte alinhado aos eixos.** A caixa que vai ao reconhecedor é a caixa alinhada aos
+   eixos do quadrilátero detectado, e não um recorte com correção de perspectiva. É
+   coerente com RF-142, que já define a caixa por mínimo e máximo dos quatro pontos, e com o
+   alvo do produto: texto de jogo é horizontal ou vertical, não inclinado.
+
+10. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.

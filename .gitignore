@@ -61,7 +61,8 @@ multi-instancia
 # baixados sob demanda e pesam dezenas de MB; não versionar binários.
 *.onnx
 lib/
-modelos/
+modelos/*
+!modelos/LEIAME.md
 
 # ─── Pacotes ─────────────────────────────────────────────────────────────────
 *.nupkg

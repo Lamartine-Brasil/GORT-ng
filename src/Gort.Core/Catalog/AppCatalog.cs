@@ -27,8 +27,10 @@ public sealed class AppCatalog
         string defaultService,
         LlmCatalog llm,
         IReadOnlyList<string> fontFallbacks,
-        IReadOnlyDictionary<string, string> links)
+        IReadOnlyDictionary<string, string> links,
+        ModernOcrModels? modernOcrModels)
     {
+        ModernOcrModels = modernOcrModels;
         Languages = languages;
         OcrEngines = engines;
         TranslationServices = services;
@@ -54,6 +56,9 @@ public sealed class AppCatalog
     public string DefaultTranslationService { get; }
 
     public LlmCatalog Llm { get; }
+
+    /// <summary>RF-029 — Modelos do motor de reconhecimento moderno, vindos dos dados.</summary>
+    public ModernOcrModels? ModernOcrModels { get; }
 
     /// <summary>RF-387 — Lista de reserva de famílias de fonte.</summary>
     public IReadOnlyList<string> FontFallbacks { get; }
@@ -156,6 +161,7 @@ public sealed class AppCatalog
         string defaultTarget = "pt-BR";
         string defaultService = "webfree";
         LlmCatalog? llm = null;
+        ModernOcrModels? modernModels = null;
         var fonts = new List<string>();
         var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -238,6 +244,28 @@ public sealed class AppCatalog
                 };
             }
 
+            if (engTable.TryGetValue("modern_ocr", out var mo) && mo is TomlTable mot)
+            {
+                var recognition = new Dictionary<string, RecognitionModel>(StringComparer.OrdinalIgnoreCase);
+                foreach (var item in GetArray(mot, "recognition"))
+                {
+                    string? lang = GetString(item, "language");
+                    string? model = GetString(item, "model");
+                    if (lang is null || model is null) continue;
+                    recognition[lang] = new RecognitionModel(model, GetString(item, "dictionary"));
+                }
+
+                string? detection = GetString(mot, "detection");
+                if (detection is not null)
+                {
+                    modernModels = new ModernOcrModels
+                    {
+                        Detection = detection,
+                        Recognition = recognition,
+                    };
+                }
+            }
+
             if (engTable.TryGetValue("fonts", out var f) && f is TomlTable ft)
                 fonts.AddRange(GetStringList(ft, "fallback"));
 
@@ -259,7 +287,7 @@ public sealed class AppCatalog
         };
 
         return new AppCatalog(languages, engines, services, defaultTarget, defaultService,
-                              llm, fonts, links);
+                              llm, fonts, links, modernModels);
     }
 
     private static TomlTable? TryRead(string path, Action<string>? log)

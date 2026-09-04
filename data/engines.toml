@@ -186,6 +186,38 @@ uses_collection = true
 separator_token = "//////"     # P-51
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Modelos do motor de reconhecimento moderno (Apêndice A: ONNX Runtime com
+# RapidOCR).
+#
+# RF-029 / RF-566 — Qual modelo atende qual idioma é DADO. Acrescentar um idioma
+# ao motor é acrescentar uma entrada aqui e pôr o arquivo na pasta de modelos;
+# nenhuma linha de código muda.
+#
+# RF-128 — Os arquivos são procurados na subpasta "modelos" do programa.
+#
+# O detector é o mesmo para todos os idiomas: ele acha ONDE há texto, não O QUE
+# está escrito. Só o reconhecedor é específico do idioma.
+#
+# `dictionary` só é necessário para modelos que não trazem o dicionário de
+# caracteres nos próprios metadados. Quando está ausente, o dicionário é lido dos
+# metadados do modelo.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[modern_ocr]
+detection = "ch_PP-OCRv4_det_infer.onnx"
+
+[[modern_ocr.recognition]]
+language = "en"
+model = "ch_PP-OCRv4_rec_infer.onnx"
+# Este modelo cobre latino, dígitos, pontuação e kanji, mas quase NÃO tem
+# hiragana nem katakana — por isso o japonês tem o seu próprio.
+
+[[modern_ocr.recognition]]
+language = "ja"
+model = "japan_PP-OCRv3_rec_infer.onnx"
+dictionary = "japan_dict.txt"
+
+# ═══════════════════════════════════════════════════════════════════════════
 # RF-279 — Modelos de linguagem: a lista e qual deles é o padrão são DADOS de
 # configuração, atualizáveis sem recompilar. Modelos são descontinuados em
 # prazos de meses; um nome embutido no código transforma cada troca do
