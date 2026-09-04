@@ -15,9 +15,9 @@ Gort.sln
 │   ├── Gort.Core/              todo o pipeline, sem nenhuma dependência de plataforma
 │   └── Gort.Platform/          abstração C1–C20 (RF-577), uma implementação por sistema
 ├── tools/
-│   └── Gort.CaptureProbe/      teste visual da Etapa 2
+│   └── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
 └── tests/
-    ├── Gort.Core.Tests/        220 testes
+    ├── Gort.Core.Tests/        275 testes
     ├── Gort.Platform.Tests/     27 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
@@ -28,6 +28,7 @@ Gort.sln
 |---|---|---|
 | **1 — Esqueleto e configuração** | RF-020 a RF-046 | **Persistência completa.** Falta o ciclo de vida da aplicação (RF-001 a RF-019), que depende da interface. |
 | **2 — Abstração de plataforma e captura** | RF-088, RF-100, RF-568 a RF-578 | **Completa.** C1 e C18 implementados nos três sistemas; captura verificada de ponta a ponta no macOS. |
+| **3 — Regiões de captura** | RF-047 a RF-087 | **Modelo e geometria completos** e verificados: conversão moldura→retângulo com escala por monitor, alinhamento de largura, composição, áreas especiais e a regra de índice reversa. Falta o desenho das molduras e da camada de seleção (RF-047 a RF-056, RF-063, RF-080 a RF-084), que depende da interface. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -50,7 +51,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 3 — Regiões de captura | RF-047 a RF-087 | Molduras, camada de seleção, escala por monitor. |
 | 5 — Um motor de OCR | RF-120, RF-121, RF-141 a RF-146 | RapidOCR sobre ONNX Runtime. |
 | 7 — Um serviço de tradução e o modo escuro | RF-225 a RF-248, RF-317 a RF-331 | **Primeiro produto utilizável de ponta a ponta.** |
 | 8 — Laço, controle e detecção de mudança | RF-004, RF-005, RF-009 a RF-014, RF-547 a RF-551 | A detecção já existe; falta o laço e o protocolo de pausa. |
@@ -77,8 +77,9 @@ sistema operacional (RF-577).
 | **Linux/X11** | `XGetImage` | Xinerama | Compila; **não executada aqui**. Sob Wayland a sessão é detectada e C1/C5/C10/C12 são reportadas indisponíveis com a explicação de RF-568. |
 
 **Latência (VII.1).** Uma caixa de diálogo típica de 800 × 200 px custa **16,8 ms de
-mediana** para capturar, 5,6% do orçamento de 300 ms de P-05. O resto do ciclo — OCR,
-tradução e desenho — tem folga.
+mediana** para capturar, 5,6% do orçamento de 300 ms de P-05. O pré-processamento completo
+de uma região de 796 × 277 — filtro HSV, erosão e ampliação 2× — custa outros **12 ms**. O
+resto do ciclo, que é dominado pelo OCR e pela tradução, tem folga.
 
 **Permissões no macOS (RF-569).** `CGPreflightScreenCaptureAccess` dá falso negativo quando
 o programa roda sob um processo responsável já autorizado (um terminal, um ambiente de
@@ -87,7 +88,7 @@ captura perfeitamente. Por isso, quando ela diz que não, faz-se uma sondagem fu
 um pixel. O caso restante — permissão negada, em que o sistema devolve o papel de parede
 sem as janelas — não é distinguível por essa via e fica coberto por RF-570.
 
-### Teste visual da Etapa 2
+### Teste visual das Etapas 2, 3 e 4
 
 ```
 dotnet run --project tools/Gort.CaptureProbe -- <pasta-de-saída>
@@ -95,9 +96,17 @@ dotnet run --project tools/Gort.CaptureProbe -- <pasta-de-saída>
 
 Imprime o relatório de capacidades, enumera os monitores, captura uma região no canto e no
 centro de cada um — incluindo coordenadas negativas —, grava tudo em PNG e mede a latência
-em regime. A opção `--ignorar-permissao` existe só nessa ferramenta, para distinguir "a
-ligação nativa está errada" de "falta a permissão do sistema"; o programa em si obedece a
-RF-569 e não inicia sem a permissão.
+em regime. Depois exercita o caminho inteiro das Etapas 3 e 4: uma moldura vira retângulo
+de captura, uma exclusão é traduzida para as coordenadas da imagem, e o resultado passa pelo
+filtro e pela ampliação, gravado como `regiao-bruta.png` e `regiao-tratada.png`.
+
+Foi assim que se conferiu, em pixels reais, o critério de aceite do capítulo 13 — "as letras
+em preto e o resto em branco" — e o objetivo declarado de RF-102: **a exclusão fica
+invisível para o OCR**, indistinguível do fundo.
+
+A opção `--ignorar-permissao` existe só nessa ferramenta, para distinguir "a ligação nativa
+está errada" de "falta a permissão do sistema"; o programa em si obedece a RF-569 e não
+inicia sem a permissão.
 
 ## Decisões registradas
 
@@ -129,7 +138,14 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
    em resolução nativa numa tela Retina dobraria a escala silenciosamente e desalinharia
    toda a sobreposição.
 
-7. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+7. **Arredondamento da escala de DPI (RF-074).** As espessuras de moldura são arredondadas
+   para **cima**, e o erro é assimétrico de propósito. A coluna de efeito de P-14 diz que
+   *diminuir* a espessura faz as "bordas entrarem na captura e virarem ruído", enquanto
+   aumentá-la só faz a "área capturada ficar menor que a desenhada". Perder um pixel de
+   conteúdo é barato; deixar a moldura entrar na imagem faz o OCR inventar caracteres na
+   borda. (O arredondamento padrão do .NET levaria 3 × 1,5 = 4,5 para 4, não para 5.)
+
+8. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.

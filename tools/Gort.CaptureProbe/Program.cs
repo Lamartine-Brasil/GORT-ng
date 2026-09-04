@@ -4,6 +4,8 @@ using Gort.Platform.Capabilities;
 using Gort.Platform.Capture;
 using Gort.Platform.Diagnostics;
 using Gort.Platform.Monitors;
+using Gort.Core.Imaging;
+using Gort.Core.Regions;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Teste visual da ETAPA 2 da PARTE X.
@@ -194,6 +196,70 @@ Console.WriteLine();
     Console.WriteLine($"Latência da captura em regime, uma caixa de diálogo típica {caixaTipica}:");
     Console.WriteLine($"  mediana {mediana:0.0} ms · pior {pior:0.0} ms · " +
                       $"{mediana / orcamento * 100:0.#}% do orçamento de {orcamento} ms (P-05)");
+}
+
+// ── ETAPA 3 + 4: regiões, exclusões e pré-processamento ─────────────────────
+//
+// Amarra o caminho inteiro: uma moldura vira retângulo de captura (RF-073 a RF-077),
+// a exclusão é traduzida para as coordenadas da imagem (RF-068), a imagem é
+// capturada (C1) e passa pelo filtro, pela erosão e pela ampliação (cap. 13).
+{
+    Console.WriteLine();
+    Console.WriteLine("Regiões, exclusões e pré-processamento (Etapas 3 e 4)");
+    Console.WriteLine(new string('─', 78));
+
+    // RF-075 — a escala vem do monitor que contém a moldura, no momento da conversão.
+    var regioes = new RegionManager(quadro => MonitorGeometry.ScaleOf(monitors, quadro));
+
+    var principal = monitors[0].Bounds;
+    // Uma moldura sobre a tela e uma exclusão recortando um pedaço de dentro dela —
+    // como um retrato ou um contador que o usuário não quer ler.
+    regioes.AddArea(new Rect(principal.Left + 40, principal.Top + 40, 806, 323));
+    regioes.AddExclusion(new Rect(principal.Left + 60, principal.Top + 80, 206, 123));
+
+    var montadas = regioes.Build();
+    int alinhamento = Gort.Core.Calibration.P.CaptureWidthAlignment;
+    Console.WriteLine($"  moldura  → captura {montadas.Captures[0]}, largura múltipla de " +
+                      $"{alinhamento}: {montadas.Captures[0].Width % alinhamento == 0}");
+
+    var exclusoesLocais = montadas.ExclusionsIn(0);
+    Console.WriteLine($"  exclusão → {exclusoesLocais.Count} recortada(s) em coordenadas " +
+                      $"da imagem: {string.Join(", ", exclusoesLocais)}");
+
+    var capturadas = platform.Capture.Capture(new CaptureRequest
+    {
+        Rects = montadas.Captures,
+        Source = CaptureSource.Screen,
+    });
+
+    if (capturadas.Count > 0)
+    {
+        var bruta = capturadas[0].Image;
+        PngWriter.Save(bruta, Path.Combine(outputDir, "regiao-bruta.png"));
+
+        // RF-119 — o assistente de configuração rápida escolhe os grupos HSV a partir de
+        // "texto claro" ou "texto escuro". As interfaces de hoje costumam ser escuras, com
+        // texto claro, então usa-se P-28. O limiar simples pressupõe o contrário — texto
+        // escuro sobre fundo claro — e inverteria a imagem nesta tela.
+        var filtro = new FilterSettings
+        {
+            Mode = FilterMode.Hsv,
+            Groups = FilterSettings.WizardGroups(darkText: false),   // P-28
+            Scale = Gort.Core.Calibration.P.DefaultScale,            // P-22
+        };
+
+        var cronometro = System.Diagnostics.Stopwatch.StartNew();
+        var tratada = Preprocessor.Process(bruta, exclusoesLocais, filtro);
+        cronometro.Stop();
+
+        PngWriter.Save(tratada, Path.Combine(outputDir, "regiao-tratada.png"));
+
+        Console.WriteLine($"  bruta    → {bruta.Width}x{bruta.Height} {bruta.Format}");
+        Console.WriteLine($"  tratada  → {tratada.Width}x{tratada.Height} {tratada.Format}, " +
+                          $"ampliação {filtro.Scale}x, filtro {filtro.Mode}, " +
+                          $"em {cronometro.Elapsed.TotalMilliseconds:0.0} ms");
+        Console.WriteLine("  arquivos → regiao-bruta.png, regiao-tratada.png");
+    }
 }
 
 return 0;
