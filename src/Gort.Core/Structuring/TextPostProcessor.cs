@@ -162,6 +162,26 @@ public static class TextPostProcessor
     }
 
     /// <summary>
+    /// RF-328 / RF-497 — Composição do texto do MODO ESCURO.
+    ///
+    /// Quando a exibição do texto reconhecido está ativa, mostra-se a tradução, DUAS quebras
+    /// de linha, o prefixo "OCR : " e o texto reconhecido. É o que permite diagnosticar um
+    /// erro de tradução distinguindo-o de um erro de OCR, sem sair da janela.
+    ///
+    /// A composição fica aqui, e não na janela, porque é regra da especificação e vale para
+    /// qualquer implementação de interface.
+    /// </summary>
+    public static string ComposeDarkModeText(string translated, string recognized,
+                                             bool showRecognized)
+    {
+        if (!showRecognized || string.IsNullOrWhiteSpace(recognized)) return translated;
+        return $"{translated}\n\n{RecognizedPrefix}{recognized}";
+    }
+
+    /// <summary>RF-328 — Prefixo do texto reconhecido no modo escuro.</summary>
+    public const string RecognizedPrefix = "OCR : ";
+
+    /// <summary>
     /// RF-329 — Normaliza quebras de linha recebidas em qualquer formato para o formato da
     /// plataforma, antes de exibir.
     /// </summary>

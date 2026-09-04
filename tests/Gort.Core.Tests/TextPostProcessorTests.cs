@@ -175,3 +175,45 @@ public class TextPostProcessorTests
         Assert.Equal("intacto", d.Apply("intacto"));
     }
 }
+
+/// <summary>19.2 — Composição do texto no modo escuro.</summary>
+public class DarkModeTextTests
+{
+    /// <summary>
+    /// RF-328 — Com a exibição do texto reconhecido ativa: a tradução, DUAS quebras de
+    /// linha, o prefixo "OCR : " e o texto reconhecido.
+    /// </summary>
+    [Fact]
+    public void RF_328_o_texto_reconhecido_vem_depois_de_duas_quebras_com_prefixo()
+    {
+        string texto = TextPostProcessor.ComposeDarkModeText(
+            "Olá mundo", "Hello world", showRecognized: true);
+
+        Assert.Equal("Olá mundo\n\nOCR : Hello world", texto);
+    }
+
+    [Fact]
+    public void RF_328_com_a_exibicao_desligada_so_a_traducao_aparece()
+        => Assert.Equal("Olá mundo",
+            TextPostProcessor.ComposeDarkModeText("Olá mundo", "Hello world", false));
+
+    [Fact]
+    public void RF_328_sem_texto_reconhecido_nao_ha_prefixo_solto()
+    {
+        Assert.Equal("Olá mundo",
+            TextPostProcessor.ComposeDarkModeText("Olá mundo", "", true));
+        Assert.Equal("Olá mundo",
+            TextPostProcessor.ComposeDarkModeText("Olá mundo", "   ", true));
+    }
+
+    /// <summary>RF-329 — As quebras de qualquer formato são normalizadas antes de exibir.</summary>
+    [Theory]
+    [InlineData("a\nb")]
+    [InlineData("a\r\nb")]
+    [InlineData("a\rb")]
+    public void RF_329_as_quebras_sao_normalizadas_para_o_formato_da_plataforma(string entrada)
+    {
+        string saida = TextPostProcessor.NormalizeNewlines(entrada);
+        Assert.Equal($"a{Environment.NewLine}b", saida);
+    }
+}

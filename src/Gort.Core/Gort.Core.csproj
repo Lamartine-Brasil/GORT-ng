@@ -10,4 +10,11 @@
     <PackageReference Include="Tomlyn" Version="0.19.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Vários requisitos 🔒 descrevem passos internos do pipeline — o encurtamento do
+         token de RF-234, a divisão da resposta de RF-233 — que merecem teste direto, e não
+         só através do comportamento observável. -->
+    <InternalsVisibleTo Include="Gort.Core.Tests" />
+  </ItemGroup>
+
 </Project>

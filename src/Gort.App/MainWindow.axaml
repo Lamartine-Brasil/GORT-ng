@@ -1,0 +1,87 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.MainWindow"
+        Title="Tradutor de tela"
+        Width="720" Height="560"
+        Background="#F4F4F6">
+
+  <DockPanel Margin="16">
+
+    <TextBlock DockPanel.Dock="Top" Text="Tradutor de tela"
+               FontSize="20" FontWeight="SemiBold" Margin="0,0,0,4" />
+    <TextBlock DockPanel.Dock="Top" x:Name="Subtitle" Foreground="#606060"
+               FontSize="12" Margin="0,0,0,14" />
+
+    <!-- RF-503 — o botão aplicar fica sempre visível. -->
+    <Border DockPanel.Dock="Bottom" Padding="0,14,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <Button x:Name="ApplyButton" Content="Aplicar" Padding="18,8" />
+        <Button x:Name="ShowWindowButton" Content="Mostrar janela de tradução" Padding="14,8" />
+        <TextBlock x:Name="MemoryIndicator" VerticalAlignment="Center"
+                   Foreground="#606060" FontSize="12" />
+      </StackPanel>
+    </Border>
+
+    <ScrollViewer>
+      <StackPanel Spacing="16">
+
+        <!-- Capacidades apuradas na inicialização (RF-576). -->
+        <Border Background="White" CornerRadius="6" Padding="14" BorderBrush="#DDD" BorderThickness="1">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Estado do sistema" FontWeight="SemiBold" />
+            <TextBlock x:Name="CapabilityText" TextWrapping="Wrap" FontSize="12"
+                       Foreground="#404040" />
+            <Button x:Name="PermissionButton" Content="Abrir configurações do sistema"
+                    IsVisible="False" HorizontalAlignment="Left" Padding="12,6" />
+          </StackPanel>
+        </Border>
+
+        <!-- Área de OCR: etapa obrigatória (RF-065). -->
+        <Border Background="White" CornerRadius="6" Padding="14" BorderBrush="#DDD" BorderThickness="1">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Área de OCR" FontWeight="SemiBold" />
+            <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#606060"
+                       Text="Marque na tela onde o texto aparece. A área fica salva e volta na próxima abertura." />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Button x:Name="DefineAreaButton" Content="Definir área" Padding="14,8" />
+              <Button x:Name="ClearAreasButton" Content="Limpar" Padding="14,8" />
+            </StackPanel>
+            <TextBlock x:Name="AreaText" FontSize="12" Foreground="#404040" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <!-- Configuração mínima: motor, serviço e idiomas. -->
+        <Border Background="White" CornerRadius="6" Padding="14" BorderBrush="#DDD" BorderThickness="1">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Configuração básica" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto" >
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Motor de OCR" VerticalAlignment="Center" />
+              <ComboBox Grid.Row="0" Grid.Column="1" x:Name="EngineBox" HorizontalAlignment="Stretch" Margin="0,3" />
+
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Idioma de origem" VerticalAlignment="Center" />
+              <ComboBox Grid.Row="1" Grid.Column="1" x:Name="SourceBox" HorizontalAlignment="Stretch" Margin="0,3" />
+
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Serviço de tradução" VerticalAlignment="Center" />
+              <ComboBox Grid.Row="2" Grid.Column="1" x:Name="ServiceBox" HorizontalAlignment="Stretch" Margin="0,3" />
+
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Idioma de destino" VerticalAlignment="Center" />
+              <ComboBox Grid.Row="3" Grid.Column="1" x:Name="TargetBox" HorizontalAlignment="Stretch" Margin="0,3" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Ação pontual (RF-202): traduzir uma vez. -->
+        <Border Background="White" CornerRadius="6" Padding="14" BorderBrush="#DDD" BorderThickness="1">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Traduzir" FontWeight="SemiBold" />
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Button x:Name="TranslateOnceButton" Content="Traduzir uma vez" Padding="18,8" />
+            </StackPanel>
+            <TextBlock x:Name="ResultText" FontSize="12" Foreground="#404040" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

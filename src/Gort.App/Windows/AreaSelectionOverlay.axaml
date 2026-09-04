@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.AreaSelectionOverlay"
+        SystemDecorations="None"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        Cursor="Cross">
+  <Canvas x:Name="Surface" Background="#01000000">
+    <Rectangle x:Name="Selection" IsVisible="False" StrokeThickness="2" />
+    <Border x:Name="Hint" Canvas.Left="24" Canvas.Top="24"
+            Background="#CC202020" CornerRadius="4" Padding="12,8">
+      <TextBlock Foreground="#F0F0F0" FontSize="13"
+                 Text="Arraste com o botão esquerdo para marcar a área. Botão direito cancela." />
+    </Border>
+  </Canvas>
+</Window>

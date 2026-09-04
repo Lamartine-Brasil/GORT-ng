@@ -186,6 +186,25 @@ uses_collection = true
 separator_token = "//////"     # P-51
 
 # ═══════════════════════════════════════════════════════════════════════════
+# VI.1 — Tradutor web gratuito.
+#
+# É o serviço PADRÃO (RF-225): o que o programa oferece a quem nunca configurou
+# nada, e contra o qual a latência do ciclo deve ser medida.
+#
+# O endereço e os identificadores de cliente são DADO, não endereço embutido no
+# código — mesma regra dos demais endereços do programa. O serviço impõe cota por
+# hora e por endereço IP; RF-245 trata isso trocando para o cliente de menor
+# qualidade ao receber 429.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[webfree]
+endpoint = "https://translate.googleapis.com/translate_a/single"
+client_high_quality = "gtx"
+client_low_quality = "dict-chrome-ex"
+# RF-247 — marcador visível prefixado ao resultado enquanto a qualidade está reduzida.
+low_quality_marker = "[qualidade reduzida] "
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Modelos do motor de reconhecimento moderno (Apêndice A: ONNX Runtime com
 # RapidOCR).
 #

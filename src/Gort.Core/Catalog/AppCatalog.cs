@@ -28,9 +28,11 @@ public sealed class AppCatalog
         LlmCatalog llm,
         IReadOnlyList<string> fontFallbacks,
         IReadOnlyDictionary<string, string> links,
-        ModernOcrModels? modernOcrModels)
+        ModernOcrModels? modernOcrModels,
+        Translation.Services.FreeWebTranslatorOptions? freeWebTranslator)
     {
         ModernOcrModels = modernOcrModels;
+        FreeWebTranslator = freeWebTranslator;
         Languages = languages;
         OcrEngines = engines;
         TranslationServices = services;
@@ -59,6 +61,12 @@ public sealed class AppCatalog
 
     /// <summary>RF-029 — Modelos do motor de reconhecimento moderno, vindos dos dados.</summary>
     public ModernOcrModels? ModernOcrModels { get; }
+
+    /// <summary>
+    /// VI.1 — Configuração do tradutor web gratuito. O endereço é dado, não endereço
+    /// embutido no código.
+    /// </summary>
+    public Translation.Services.FreeWebTranslatorOptions? FreeWebTranslator { get; }
 
     /// <summary>RF-387 — Lista de reserva de famílias de fonte.</summary>
     public IReadOnlyList<string> FontFallbacks { get; }
@@ -162,6 +170,7 @@ public sealed class AppCatalog
         string defaultService = "webfree";
         LlmCatalog? llm = null;
         ModernOcrModels? modernModels = null;
+        Translation.Services.FreeWebTranslatorOptions? freeWeb = null;
         var fonts = new List<string>();
         var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -266,6 +275,24 @@ public sealed class AppCatalog
                 }
             }
 
+            if (engTable.TryGetValue("webfree", out var wf) && wf is TomlTable wft)
+            {
+                string? endpoint = GetString(wft, "endpoint");
+                string? high = GetString(wft, "client_high_quality");
+                string? low = GetString(wft, "client_low_quality");
+                if (endpoint is not null && high is not null && low is not null)
+                {
+                    freeWeb = new Translation.Services.FreeWebTranslatorOptions
+                    {
+                        Endpoint = endpoint,
+                        HighQualityClient = high,
+                        LowQualityClient = low,
+                        LowQualityMarker = GetString(wft, "low_quality_marker")
+                                           ?? "[qualidade reduzida] ",
+                    };
+                }
+            }
+
             if (engTable.TryGetValue("fonts", out var f) && f is TomlTable ft)
                 fonts.AddRange(GetStringList(ft, "fallback"));
 
@@ -287,7 +314,7 @@ public sealed class AppCatalog
         };
 
         return new AppCatalog(languages, engines, services, defaultTarget, defaultService,
-                              llm, fonts, links, modernModels);
+                              llm, fonts, links, modernModels, freeWeb);
     }
 
     private static TomlTable? TryRead(string path, Action<string>? log)

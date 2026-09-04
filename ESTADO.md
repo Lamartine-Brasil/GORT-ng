@@ -14,12 +14,15 @@ Gort.sln
 ├── src/
 │   ├── Gort.Core/              todo o pipeline, sem nenhuma dependência de plataforma
 │   ├── Gort.Platform/          abstração C1–C20 (RF-577), uma implementação por sistema
-│   └── Gort.Ocr.Rapid/         motor de OCR do Apêndice A (ONNX Runtime + RapidOCR)
+│   ├── Gort.Ocr.Rapid/         motor de OCR do Apêndice A (ONNX Runtime + RapidOCR)
+│   ├── Gort.Engine/            o ciclo do capítulo 8, passos 7 a 13
+│   └── Gort.App/               interface em Avalonia
 ├── tools/
 │   ├── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
-│   └── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
+│   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
+│   └── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 └── tests/
-    ├── Gort.Core.Tests/        288 testes
+    ├── Gort.Core.Tests/        322 testes
     ├── Gort.Platform.Tests/     27 testes
     ├── Gort.Ocr.Tests/          36 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
@@ -33,6 +36,7 @@ Gort.sln
 | **2 — Abstração de plataforma e captura** | RF-088, RF-100, RF-568 a RF-578 | **Completa.** C1 e C18 implementados nos três sistemas; captura verificada de ponta a ponta no macOS. |
 | **3 — Regiões de captura** | RF-047 a RF-087 | **Modelo e geometria completos** e verificados: conversão moldura→retângulo com escala por monitor, alinhamento de largura, composição, áreas especiais e a regra de índice reversa. Falta o desenho das molduras e da camada de seleção (RF-047 a RF-056, RF-063, RF-080 a RF-084), que depende da interface. |
 | **5 — Um motor de OCR** | RF-120, RF-121, RF-141 a RF-146 | **Completa e verificada** em texto real de tela. Detecção DBNet e reconhecimento CRNN com decodificação CTC, em inglês e japonês. |
+| **7 — Um serviço de tradução e o modo escuro** | RF-225 a RF-248, RF-308 a RF-331 | **Completa.** É o *primeiro produto utilizável de ponta a ponta*: captura, reconhece, traduz e mostra numa janela. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -55,7 +59,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 7 — Um serviço de tradução e o modo escuro | RF-225 a RF-248, RF-317 a RF-331 | **Primeiro produto utilizável de ponta a ponta.** |
 | 8 — Laço, controle e detecção de mudança | RF-004, RF-005, RF-009 a RF-014, RF-547 a RF-551 | A detecção já existe; falta o laço e o protocolo de pausa. |
 | 9 — Atalhos e controle remoto | RF-436 a RF-453, RF-517 a RF-522 | |
 | 11 — Modo camada | RF-007, RF-332 a RF-343, RF-387 a RF-391 | |
@@ -89,11 +92,20 @@ do cache. Medido numa captura real de 796 × 277:
 | OCR — detecção | 49 ms |
 | OCR — reconhecimento | ~14 ms **por linha** |
 
-O reconhecimento é por linha, então o custo cresce com a quantidade de texto: uma caixa de
-diálogo de 2 a 4 linhas fica em torno de 110 ms de total, com folga; uma tela inteira de
-IDE com 23 linhas passa de 400 ms e estoura o orçamento. O alvo do produto é a caixa de
-diálogo, e é para ela que a área de OCR existe. Se for preciso mais margem, o caminho é
-processar as linhas em lote — o modelo de referência agrupa de 6 em 6 —, o que ainda não
+O reconhecimento é por linha, então o custo cresce com a quantidade de texto.
+
+**RF-547 verificado.** O requisito é o ciclo inteiro caber em P-05 *quando a tradução vem
+do cache*. Medido de ponta a ponta com o ciclo real, numa caixa de diálogo de duas linhas:
+
+| Situação | Tempo | Orçamento |
+|---|---|---|
+| Caixa de diálogo, 2 linhas, **tradução em cache** | **99 ms** | **33% de P-05** ✓ |
+| A mesma caixa, primeira vez (com rede) | 664 ms | dominado pela rede — RF-548 |
+| Tela inteira de IDE, 51 linhas, 29 blocos, em cache | 1054 ms | estoura |
+
+O alvo do produto é a caixa de diálogo, e é para ela que a área de OCR existe. A tela
+inteira estoura porque o reconhecimento é por linha; se for preciso mais margem, o caminho
+é processar as linhas em lote — o modelo de referência agrupa de 6 em 6 —, o que ainda não
 foi feito.
 
 **Permissões no macOS (RF-569).** `CGPreflightScreenCaptureAccess` dá falso negativo quando
@@ -145,6 +157,19 @@ carregado com dicionário externo e lendo latino corretamente, o que confirma qu
 mapeamento índice → caractere está alinhado (um erro de um índice produziria lixo). A
 acurácia em texto japonês de verdade ainda **não foi medida** — falta conteúdo japonês em
 tela para comparar.
+
+## O produto de ponta a ponta
+
+`Gort.App` é a aplicação Avalonia: janela principal com o estado do sistema, definição de
+área, configuração básica e "traduzir uma vez"; camada de seleção de área sobre toda a área
+de trabalho virtual; e a janela de tradução em modo escuro.
+
+`Gort.Engine` tem o `TranslationCycle`, que executa os passos 7 a 13 do fluxo do capítulo 8.
+O laço que os repete fica FORA dele — é o que permite "traduzir uma vez" percorrer
+exatamente o mesmo caminho da tradução contínua, que é o que a Etapa 8 vai acrescentar.
+
+**Verificado de ponta a ponta:** capturou a tela, reconheceu 51 linhas, agrupou em 29
+blocos, traduziu todos em UMA requisição, e o segundo ciclo não foi à rede.
 
 ## Decisões registradas
 
@@ -198,7 +223,16 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
    coerente com RF-142, que já define a caixa por mínimo e máximo dos quatro pontos, e com o
    alvo do produto: texto de jogo é horizontal ou vertical, não inclinado.
 
-10. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+10. **Versão do Avalonia.** Fixada em 11.3.7, não na 12. Os geradores de código da 12
+    exigem Roslyn 4.14, e o SDK .NET 9 instalado traz 4.12: eles são desativados
+    **silenciosamente** (aviso CS9057) e `InitializeComponent` nunca é gerado, de modo que
+    nem o projeto do próprio modelo compila. O Apêndice A fixa a biblioteca, não a versão.
+
+11. **Endereço do tradutor web.** Fica em `data/engines.toml`, não no código — mesma regra
+    dos demais endereços do programa (RF-513). Os identificadores de cliente de alta e de
+    baixa qualidade de RF-245 também.
+
+12. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.

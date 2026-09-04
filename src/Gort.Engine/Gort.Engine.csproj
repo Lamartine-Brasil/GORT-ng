@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gort.Core\Gort.Core.csproj" />
+    <ProjectReference Include="..\Gort.Platform\Gort.Platform.csproj" />
+    <ProjectReference Include="..\Gort.Ocr.Rapid\Gort.Ocr.Rapid.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
