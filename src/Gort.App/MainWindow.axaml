@@ -75,7 +75,9 @@
           <StackPanel Spacing="8">
             <TextBlock Text="Traduzir" FontWeight="SemiBold" />
             <StackPanel Orientation="Horizontal" Spacing="10">
+              <Button x:Name="TranslateLoopButton" Content="Iniciar tradução" Padding="18,8" />
               <Button x:Name="TranslateOnceButton" Content="Traduzir uma vez" Padding="18,8" />
+              <ComboBox x:Name="SpeedBox" Width="180" VerticalAlignment="Center" />
             </StackPanel>
             <TextBlock x:Name="ResultText" FontSize="12" Foreground="#404040" TextWrapping="Wrap" />
           </StackPanel>

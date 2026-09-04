@@ -2,7 +2,9 @@ using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Gort.App.Windows;
+using Gort.Core.Caching;
 using Gort.Core.Regions;
+using Gort.Engine;
 using Gort.Core.Structuring;
 using Gort.Platform.Capabilities;
 using Gort.Platform.Monitors;
@@ -19,6 +21,8 @@ public partial class MainWindow : Window
 {
     private readonly AppSession _session;
     private DarkTranslationWindow? _translationWindow;
+    private readonly TranslationLoop _loop;
+    private readonly DisplayMemory _displayMemory = new();
     private bool _busy;
 
     public MainWindow() : this(AppSession.Create()) { }
@@ -28,6 +32,8 @@ public partial class MainWindow : Window
         _session = session;
         InitializeComponent();
 
+        _loop = BuildLoop();
+
         Subtitle.Text = $"{_session.Platform.PlatformName} · " +
                         $"{_session.Platform.Monitors.Monitors.Count} monitor(es)";
 
@@ -35,7 +41,10 @@ public partial class MainWindow : Window
         FillChoices();
         ShowAreas();
 
+        FillSpeeds();
+
         DefineAreaButton.Click += async (_, _) => await DefineAreaAsync();
+        TranslateLoopButton.Click += (_, _) => ToggleLoop();
         ClearAreasButton.Click += (_, _) => { _session.Regions.ClearAll(); ShowAreas(); };
         TranslateOnceButton.Click += async (_, _) => await TranslateOnceAsync();
         ApplyButton.Click += (_, _) => Apply();
@@ -208,6 +217,137 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>P-05 a P-09 — As cinco velocidades, da mais rápida à mais lenta.</summary>
+    private void FillSpeeds()
+    {
+        SpeedBox.ItemsSource = Enumerable.Range(1, 5)
+            .Select(i => $"{i} — {Gort.Core.Calibration.P.CycleIntervalMs(i)} ms")
+            .ToList();
+        SpeedBox.SelectedIndex = Math.Clamp(_session.Profile.Speed, 1, 5) - 1;
+        SpeedBox.SelectionChanged += (_, _) =>
+        {
+            if (SpeedBox.SelectedIndex >= 0) _session.Profile.Speed = SpeedBox.SelectedIndex + 1;
+        };
+    }
+
+    /// <summary>
+    /// RF-008 / Passo 1 do fluxo — O mesmo acionamento inicia e para: se já estiver
+    /// traduzindo, ele para.
+    /// </summary>
+    private void ToggleLoop()
+    {
+        if (_loop.IsRunning)
+        {
+            // RF-010 — se a thread não parar no prazo, o sinalizador NÃO é revertido e o
+            // usuário é informado, em vez de o programa fingir que parou.
+            if (!_loop.Stop())
+            {
+                ResultText.Text = "o laço não parou no prazo; tentando de novo no próximo comando.";
+                return;
+            }
+            ShowLoopState();
+            return;
+        }
+
+        // Passo 2 — verificações de pré-condição.
+        if (!_session.Regions.HasAnyIncrementalArea)
+        {
+            // RF-065 — sem área, a tradução não começa e o programa explica.
+            ResultText.Text = "É preciso definir ao menos uma área de OCR antes de traduzir.";
+            return;
+        }
+
+        var engine = _session.Engines.Resolve(_session.Profile.OcrEngine);
+        if (engine is null)
+        {
+            ResultText.Text = "Nenhum motor de OCR disponível.";
+            return;
+        }
+
+        // RF-122 — o motor de nuvem não pode ser usado em tradução em tempo real.
+        var info = _session.Catalog.OcrEngine(engine.Key);
+        if (info is { Realtime: false })
+        {
+            ResultText.Text = $"O motor '{engine.Key}' só funciona em modo pontual.";
+            return;
+        }
+
+        // RF-351 — a sobreposição exige motor que devolva posição de palavra.
+        if (_session.Profile.WindowMode == Gort.Core.Structuring.WindowMode.Overlay
+            && !engine.ProvidesWordPositions)
+        {
+            ResultText.Text = $"O motor '{engine.Key}' não devolve posição de palavra; " +
+                              "a sobreposição não pode ser usada com ele.";
+            return;
+        }
+
+        // Passo 3 — a janela de tradução é preparada.
+        var window = TranslationWindow();
+        window.Show();
+        window.Clear();
+
+        // RF-071 — ao iniciar uma tradução que não é instantânea, a memória de "último
+        // instantâneo" é apagada.
+        _session.Regions.ForgetLastSnapshot();
+
+        if (!_loop.Start(LoopMode.Realtime))
+        {
+            ResultText.Text = "não foi possível iniciar: o laço anterior não parou.";
+            return;
+        }
+        ShowLoopState();
+    }
+
+    private TranslationLoop BuildLoop()
+    {
+        var host = new LoopHost
+        {
+            Areas = () => _session.Regions.Build(),
+            Settings = () => _session.BuildCycleSettings(),
+            RunCycle = (areas, settings) => _session.Cycle.RunAsync(areas, settings),
+            HasTranslationWindow = () => _translationWindow is not null,
+            CycleIntervalMs = () => _session.Profile.CycleIntervalMs,
+
+            // Passo 18 — o desenho é DESPACHADO para a thread de interface. O laço nunca
+            // desenha, e P2 proíbe que ele abra diálogo.
+            Draw = result => Dispatcher.UIThread.Post(() =>
+            {
+                // Passo 17 — a memória de exibição é aplicada ao texto final.
+                string text = _displayMemory.Apply(result.DisplayText);
+
+                // RF-240 — com "ignorar tradução vazia", um resultado vazio não substitui
+                // o que está na tela.
+                if (string.IsNullOrWhiteSpace(text) && _session.Advanced.IgnoreEmptyTranslation)
+                    return;
+
+                _translationWindow?.Show(text, result.RecognizedText);
+            }),
+
+            Repaint = () => Dispatcher.UIThread.Post(() => _translationWindow?.InvalidateVisual()),
+
+            ReportError = message => Dispatcher.UIThread.Post(() =>
+                ResultText.Text = $"erro no laço: {message}"),
+
+            FlushMemory = () => _session.Memory?.FlushAsync(),
+
+            Stopped = () => Dispatcher.UIThread.Post(ShowLoopState),
+        };
+
+        return new TranslationLoop(host);
+    }
+
+    private void ShowLoopState()
+    {
+        bool running = _loop.IsRunning;
+        TranslateLoopButton.Content = running ? "Parar tradução" : "Iniciar tradução";
+        TranslateOnceButton.IsEnabled = !running && _session.Regions.HasAnyIncrementalArea;
+        _translationWindow?.SetRunning(running);
+
+        // RF-320 — "sempre no topo apenas durante a tradução".
+        if (_session.Advanced.AlwaysOnTopOnlyWhileTranslating)
+            _translationWindow?.SetAlwaysOnTop(running);
+    }
+
     private DarkTranslationWindow TranslationWindow()
     {
         if (_translationWindow is null)
@@ -218,6 +358,11 @@ public partial class MainWindow : Window
             };
             _translationWindow.SetAlwaysOnTop(_session.Options.TranslationWindowAlwaysOnTop);
             _translationWindow.SetFont(_session.Advanced.DarkModeFont, _session.Profile.FontSize);
+
+            // RF-222 / RF-223 — memória de exibição, conforme as opções avançadas.
+            _displayMemory.Enabled = _session.Advanced.DisplayMemoryEnabled;
+            _displayMemory.Capacity = _session.Advanced.DisplayMemoryCount;
+            _displayMemory.LifetimeSeconds = _session.Advanced.DisplayMemoryLifetimeSeconds;
         }
         return _translationWindow;
     }
@@ -237,16 +382,33 @@ public partial class MainWindow : Window
         var language = _session.Catalog.Language(_session.Profile.OcrLanguage);
         if (language is not null) _session.Profile.ApplyLanguageProperties(language);
 
-        _session.ApplyConfiguration();
-        _session.SaveProfile();
+        // RF-012 — a mudança passa pelo protocolo "pausar → aplicar → retomar". Se a
+        // parada falhar por tempo, NADA é aplicado e o usuário é informado.
+        var outcome = _loop.PauseAndResume(() =>
+        {
+            _session.ApplyConfiguration();
+            _session.SaveProfile();
+        });
+
+        if (outcome == ApplyResult.Aborted)
+        {
+            ResultText.Text = "o laço não parou no prazo: NADA foi aplicado.";
+            return;
+        }
 
         FillChoices();
         ShowAreas();
-        ResultText.Text = "configuração aplicada e perfil salvo.";
+        ShowLoopState();
+        ResultText.Text = outcome == ApplyResult.AppliedAndResumed
+            ? "configuração aplicada, perfil salvo, tradução retomada."
+            : "configuração aplicada e perfil salvo.";
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        // RF-016 — ao encerrar de fato, o laço para antes de tudo.
+        _loop.Stop();
+
         // A janela de tradução se recusa a fechar por conta de RF-326; ao encerrar o
         // programa de verdade, essa recusa tem de ser suspensa.
         if (_translationWindow is not null)

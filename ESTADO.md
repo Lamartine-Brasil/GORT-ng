@@ -25,6 +25,7 @@ Gort.sln
     ├── Gort.Core.Tests/        322 testes
     ├── Gort.Platform.Tests/     27 testes
     ├── Gort.Ocr.Tests/          36 testes
+    ├── Gort.Engine.Tests/       19 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
 
@@ -37,6 +38,7 @@ Gort.sln
 | **3 — Regiões de captura** | RF-047 a RF-087 | **Modelo e geometria completos** e verificados: conversão moldura→retângulo com escala por monitor, alinhamento de largura, composição, áreas especiais e a regra de índice reversa. Falta o desenho das molduras e da camada de seleção (RF-047 a RF-056, RF-063, RF-080 a RF-084), que depende da interface. |
 | **5 — Um motor de OCR** | RF-120, RF-121, RF-141 a RF-146 | **Completa e verificada** em texto real de tela. Detecção DBNet e reconhecimento CRNN com decodificação CTC, em inglês e japonês. |
 | **7 — Um serviço de tradução e o modo escuro** | RF-225 a RF-248, RF-308 a RF-331 | **Completa.** É o *primeiro produto utilizável de ponta a ponta*: captura, reconhece, traduz e mostra numa janela. |
+| **8 — Laço, controle e detecção de mudança 🔒** | RF-004, RF-005, RF-009 a RF-014, RF-192 a RF-205, RF-547 a RF-551 | **Completa.** Tradução contínua, protocolo de pausa e os três critérios de aceite do capítulo 9 verificados. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -59,7 +61,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 8 — Laço, controle e detecção de mudança | RF-004, RF-005, RF-009 a RF-014, RF-547 a RF-551 | A detecção já existe; falta o laço e o protocolo de pausa. |
 | 9 — Atalhos e controle remoto | RF-436 a RF-453, RF-517 a RF-522 | |
 | 11 — Modo camada | RF-007, RF-332 a RF-343, RF-387 a RF-391 | |
 | 12 — Modo sobreposição, layout | RF-344 a RF-386, RF-392 | Colisões, tamanho automático de fonte, quebra por caractere. |
@@ -170,6 +171,29 @@ exatamente o mesmo caminho da tradução contínua, que é o que a Etapa 8 vai a
 
 **Verificado de ponta a ponta:** capturou a tela, reconheceu 51 linhas, agrupou em 29
 blocos, traduziu todos em UMA requisição, e o segundo ciclo não foi à rede.
+
+## O laço de tradução
+
+`TranslationLoop` roda em **thread dedicada** e é **síncrono de ponta a ponta** dentro dela
+(RF-009). O término da thread é o sinal de parada que a interface usa; se a thread
+terminasse no primeiro ponto de espera, quem esperava por ela concluiria que parou e
+passaria a alterar configuração com o ciclo ainda rodando.
+
+É por isso que a tradução, que é assíncrona, é aguardada por **sondagem** em passos de
+P-126 dentro da thread, e não com `await`: o `await` devolveria a thread ao chamador e
+destruiria a garantia. Foi a decisão de projeto mais consequente desta etapa.
+
+Os três critérios de aceite do capítulo 9 estão verificados em teste:
+
+| Critério | Como está coberto |
+|---|---|
+| 20 acionamentos seguidos não deixam duas threads vivas nem matam o gancho de teclado | alterna início e parada 20 vezes e confere o estado final |
+| Aplicar configuração nunca produz um ciclo com meia configuração antiga e meia nova | observa o estado do laço **de dentro** da ação: é sempre `Idle` |
+| Fechar durante uma tradução com serviço lento encerra em no máximo P-03 | tradução de 10 s, parada medida abaixo de 1 s |
+
+`ApplyResult` distingue "aplicado sem pausa" de "abortado", coisa que o pseudocódigo do
+capítulo 9 não faz — ele devolve falso nos dois casos. RF-012 exige que o chamador seja
+informado de que **nada foi aplicado**, e um único booleano não diz isso.
 
 ## Decisões registradas
 
