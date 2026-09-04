@@ -8,15 +8,18 @@ captura por camada específica de sistema atrás da abstração de RF-577.
 
 ```
 Gort.sln
-├── data/                    catálogos como DADO, não código (RF-029)
-│   ├── languages.toml       tabela de idiomas (RF-308 a RF-316)
-│   └── engines.toml         motores de OCR, serviços, modelos, fontes, links
+├── data/                       catálogos como DADO, não código (RF-029)
+│   ├── languages.toml          tabela de idiomas (RF-308 a RF-316)
+│   └── engines.toml            motores de OCR, serviços, modelos, fontes, links
 ├── src/
-│   ├── Gort.Core/           todo o pipeline, sem nenhuma dependência de plataforma
-│   └── Gort.Platform/       abstração C1–C20 (RF-577) — a construir
+│   ├── Gort.Core/              todo o pipeline, sem nenhuma dependência de plataforma
+│   └── Gort.Platform/          abstração C1–C20 (RF-577), uma implementação por sistema
+├── tools/
+│   └── Gort.CaptureProbe/      teste visual da Etapa 2
 └── tests/
-    ├── Gort.Core.Tests/     220 testes
-    └── cases/grouping/      casos de agrupamento gravados em arquivo (Etapa 6)
+    ├── Gort.Core.Tests/        220 testes
+    ├── Gort.Platform.Tests/     27 testes
+    └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
 
 ## Etapas concluídas
@@ -24,6 +27,7 @@ Gort.sln
 | Etapa | Requisitos | Situação |
 |---|---|---|
 | **1 — Esqueleto e configuração** | RF-020 a RF-046 | **Persistência completa.** Falta o ciclo de vida da aplicação (RF-001 a RF-019), que depende da interface. |
+| **2 — Abstração de plataforma e captura** | RF-088, RF-100, RF-568 a RF-578 | **Completa.** C1 e C18 implementados nos três sistemas; captura verificada de ponta a ponta no macOS. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -46,7 +50,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 2 — Abstração de plataforma e captura | RF-088, RF-100, RF-568 a RF-578 | C1–C12 com uma implementação por sistema. |
 | 3 — Regiões de captura | RF-047 a RF-087 | Molduras, camada de seleção, escala por monitor. |
 | 5 — Um motor de OCR | RF-120, RF-121, RF-141 a RF-146 | RapidOCR sobre ONNX Runtime. |
 | 7 — Um serviço de tradução e o modo escuro | RF-225 a RF-248, RF-317 a RF-331 | **Primeiro produto utilizável de ponta a ponta.** |
@@ -60,6 +63,41 @@ Também prontos, transversais a tudo:
 | 17 — Localização e interface completa | RF-481 a RF-489, RF-501 a RF-546 | |
 | 18 — Atualização, comunidade e depuração | RF-416 a RF-435, RF-490 a RF-500 | |
 | 19 — Endurecimento | RF-552 a RF-567 e toda a PARTE VIII | |
+
+## Camada de plataforma — o que está verificado
+
+`PlatformServices.Create()` escolhe a implementação do sistema e apura **todas** as vinte
+capacidades da PARTE IX.1 na inicialização (RF-576). Nada acima da abstração conhece o
+sistema operacional (RF-577).
+
+| Sistema | C1 captura | C18 monitores | Situação |
+|---|---|---|---|
+| **macOS** | CoreGraphics | CoreGraphics | **Verificada nesta máquina.** Conteúdo, orientação, cores e dimensões conferidos contra a tela real. |
+| **Windows** | GDI (`BitBlt` + `CreateDIBSection`) | `EnumDisplayMonitors` + `GetDpiForMonitor` | Compila; **não executada aqui** — falta uma máquina Windows. |
+| **Linux/X11** | `XGetImage` | Xinerama | Compila; **não executada aqui**. Sob Wayland a sessão é detectada e C1/C5/C10/C12 são reportadas indisponíveis com a explicação de RF-568. |
+
+**Latência (VII.1).** Uma caixa de diálogo típica de 800 × 200 px custa **16,8 ms de
+mediana** para capturar, 5,6% do orçamento de 300 ms de P-05. O resto do ciclo — OCR,
+tradução e desenho — tem folga.
+
+**Permissões no macOS (RF-569).** `CGPreflightScreenCaptureAccess` dá falso negativo quando
+o programa roda sob um processo responsável já autorizado (um terminal, um ambiente de
+desenvolvimento). Confiar só nela faria o programa se recusar a abrir numa instalação que
+captura perfeitamente. Por isso, quando ela diz que não, faz-se uma sondagem funcional de
+um pixel. O caso restante — permissão negada, em que o sistema devolve o papel de parede
+sem as janelas — não é distinguível por essa via e fica coberto por RF-570.
+
+### Teste visual da Etapa 2
+
+```
+dotnet run --project tools/Gort.CaptureProbe -- <pasta-de-saída>
+```
+
+Imprime o relatório de capacidades, enumera os monitores, captura uma região no canto e no
+centro de cada um — incluindo coordenadas negativas —, grava tudo em PNG e mede a latência
+em regime. A opção `--ignorar-permissao` existe só nessa ferramenta, para distinguir "a
+ligação nativa está errada" de "falta a permissão do sistema"; o programa em si obedece a
+RF-569 e não inicia sem a permissão.
 
 ## Decisões registradas
 
@@ -84,10 +122,22 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
 5. **Fim de frase (RF-177).** Implementado ao pé da letra: apara-se o branco à direita uma
    vez e só depois removem-se os fechamentos de P-45.
 
+6. **Resolução da captura (6.3).** No macOS captura-se com 1 pixel por PONTO, e não em
+   resolução nativa. Não é preferência de qualidade: o contrato de coordenadas de 6.3 diz
+   que voltar do espaço da imagem para o da tela é "dividir pelo fator de ampliação e somar
+   a origem da área", o que só vale se a imagem for 1:1 com as coordenadas de tela. Capturar
+   em resolução nativa numa tela Retina dobraria a escala silenciosamente e desalinharia
+   toda a sobreposição.
+
+7. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+   fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
+   especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
+   recusar, e uma imagem vazia entraria no OCR como texto em branco.
+
 ## Como rodar os testes
 
 ```
-dotnet test tests/Gort.Core.Tests/Gort.Core.Tests.csproj
+dotnet test
 ```
 
 Para acrescentar um caso de agrupamento, basta criar um arquivo em
