@@ -1,5 +1,6 @@
 using System.Text;
 using Gort.Core.Caching;
+using Gort.Core.ColorAnalysis;
 using Gort.Core.Catalog;
 using Gort.Core.Imaging;
 using Gort.Core.Model;
@@ -39,6 +40,9 @@ public sealed class CycleSettings
     /// automática está ativa.
     /// </summary>
     public bool NeedsOriginalImage { get; init; }
+
+    /// <summary>RF-394 / RF-413 — Opções da análise automática de cor.</summary>
+    public AutoColorOptions? AutoColor { get; init; }
 }
 
 /// <summary>O que um ciclo produziu.</summary>
@@ -91,6 +95,30 @@ public sealed class TranslationCycle
     {
         _capture = capture;
         _pipeline = pipeline;
+    }
+
+    /// <summary>
+    /// Cap. 20 — Análise de cor de cada bloco da região.
+    ///
+    /// A imagem passada é a CAPTURA BRUTA, sem filtro nem binarização (RF-395); os
+    /// retângulos vêm no espaço da imagem tratada, e o analisador faz a conversão por escala
+    /// em cada eixo.
+    /// </summary>
+    private static IReadOnlyList<AutoColorResult?> AnalyseColors(
+        ImageBuffer original, ImageBuffer processed,
+        IReadOnlyList<TranslationBlock> blocks, AutoColorOptions options)
+    {
+        var colors = new AutoColorResult?[blocks.Count];
+
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            var words = blocks[i].Lines.SelectMany(l => l.Words).Select(w => w.Box).ToList();
+
+            colors[i] = AutoColorAnalyzer.Analyze(
+                original, blocks[i].SourceBox, words,
+                processed.Width, processed.Height, options);
+        }
+        return colors;
     }
 
     public async Task<CycleResult> RunAsync(BuiltAreas areas, CycleSettings settings)
@@ -151,7 +179,7 @@ public sealed class TranslationCycle
                 recognized.Append(treated);
             }
 
-            regions.Add(new RegionResult
+            var result = new RegionResult
             {
                 Index = region.Index,
                 ScreenRect = region.ScreenRect,
@@ -159,7 +187,20 @@ public sealed class TranslationCycle
                 Lines = lines,
                 Blocks = blocks,
                 ResultBox = Rect.UnionAll(lines.Select(l => l.Box)),   // RF-156
-            });
+            };
+
+            // Passo 14 — se o modo é sobreposição e a cor automática está ativa, a análise
+            // roda para cada bloco usando a imagem ORIGINAL (RF-394, RF-395).
+            //
+            // RF-099 — a imagem original é liberada assim que a análise da região termina;
+            // com ampliação, cada região ocupa dezenas de megabytes.
+            if (settings.NeedsOriginalImage && settings.AutoColor is { Enabled: true })
+            {
+                result.UsesAutoColor = true;
+                result.AutoColors = AnalyseColors(region.Image, processed, blocks, settings.AutoColor);
+            }
+
+            regions.Add(result);
         }
 
         string recognizedText = recognized.ToString();

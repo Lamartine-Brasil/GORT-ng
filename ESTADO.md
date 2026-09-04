@@ -21,9 +21,9 @@ Gort.sln
 │   ├── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
 │   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
-│   └── Gort.LayerProbe/        desenho do modo camada, fora da tela (Etapa 11)
+│   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        397 testes
+    ├── Gort.Core.Tests/        444 testes
     ├── Gort.Platform.Tests/     27 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
@@ -42,6 +42,8 @@ Gort.sln
 | **8 — Laço, controle e detecção de mudança 🔒** | RF-004, RF-005, RF-009 a RF-014, RF-192 a RF-205, RF-547 a RF-551 | **Completa.** Tradução contínua, protocolo de pausa e os três critérios de aceite do capítulo 9 verificados. |
 | **9 — Atalhos e controle remoto** | RF-436 a RF-453, RF-517 a RF-522 | **Lógica completa e verificada.** O controle remoto funciona; os atalhos globais dependem de permissão de Acessibilidade, ausente nesta máquina. |
 | **11 — Modo camada** | RF-007, RF-332 a RF-343, RF-387 a RF-391 | **Completa e verificada** por renderização fora da tela: contorno duplo, fundo do texto, transparência e borda de destaque. |
+| **12 — Modo sobreposição, layout 🔒** | RF-344 a RF-386, RF-392 | **Completa e verificada.** Colisões, tamanho automático de fonte, quebra por caractere e desenho sobre o texto original. |
+| **13 — Análise automática de cor 🔒** | RF-098, RF-099, RF-393 a RF-415 | **Ligada ao ciclo.** A análise construída na primeira leva entrou em uso no passo 14 do fluxo. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -235,6 +237,31 @@ verificação repetível.
 RF-007 passa: o desenho vetorial funciona, inclusive com a parte japonesa da cadeia de teste.
 Quando falha, o contorno é desativado em todo o programa e o texto continua legível, sem a
 moldura.
+
+## O modo sobreposição
+
+É o modo que dá nome ao produto: não há janela visível, e a tradução de cada bloco é
+desenhada **sobre o bloco original**, com tamanho de fonte proporcional e cores extraídas da
+própria imagem. O resultado se parece com uma versão traduzida do software.
+
+O caminho de layout, todo calibrado:
+
+| Passo | Requisito | O que faz |
+|---|---|---|
+| Colisões | RF-355 a RF-358 🔒 | separa o par de maior interseção, no eixo que perde menos área |
+| Tamanho de fonte | RF-360 a RF-363 🔒 | deriva do original, satura, e busca por bissecção com atalho no caso comum |
+| Quebra de linha | RF-369 a RF-372 🔒 | por **caractere**, com busca binária do maior prefixo |
+| Teste de "cabe" | RF-364 🔒 | posiciona cada linha onde ela será desenhada, sem somar alturas |
+| Cache de medição | RF-374 🔒 | 45 acertos para 24 medições reais num cenário de três blocos |
+
+**Verificado por renderização fora da tela**, com o caso mais comum do produto: um nome de
+personagem curto sobre uma fala longa, com os retângulos se sobrepondo. O título preservou
+`(30,24 190x46)` inteiro e a fala cedeu, começando exatamente onde ele termina — que é o que
+RF-357 exige, e o que impede o nome do personagem de virar texto ilegível.
+
+A quebra sai **no meio da palavra** ("Precisamos s / air agora"). Isso é o comportamento
+exigido, não um defeito: RF-369 quebra por caractere, e a PARTE XI item 15 proíbe
+explicitamente hifenização e quebra por palavra.
 
 ## Decisões registradas
 

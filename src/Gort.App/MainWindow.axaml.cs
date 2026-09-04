@@ -138,9 +138,13 @@ public partial class MainWindow : Window
         TargetBox.SelectedItem = _session.Profile.TargetLanguage;
 
         // RF-317 — os três modos de janela. A sobreposição entra na Etapa 12.
-        WindowModeBox.ItemsSource = new[] { "escuro", "camada" };
-        WindowModeBox.SelectedItem =
-            _session.Profile.WindowMode == WindowMode.Layer ? "camada" : "escuro";
+        WindowModeBox.ItemsSource = new[] { "escuro", "camada", "sobreposição" };
+        WindowModeBox.SelectedItem = _session.Profile.WindowMode switch
+        {
+            WindowMode.Layer => "camada",
+            WindowMode.Overlay => "sobreposição",
+            _ => "escuro",
+        };
     }
 
     private void ShowAreas()
@@ -480,6 +484,10 @@ public partial class MainWindow : Window
         // de OCR seria capturada e traduzida a si mesma.
         WarnIfWindowOverlapsAreas();
 
+        // RF-383 — preparar a sobreposição: limpar dados, zerar o acúmulo e liberar os
+        // bloqueios antes do primeiro quadro.
+        if (window is OverlayWindow prepared) prepared.PrepareForTranslation();
+
         // RF-071 — ao iniciar uma tradução que não é instantânea, a memória de "último
         // instantâneo" é apagada.
         _session.Regions.ForgetLastSnapshot();
@@ -506,6 +514,15 @@ public partial class MainWindow : Window
             // desenha, e P2 proíbe que ele abra diálogo.
             Draw = result => Dispatcher.UIThread.Post(() =>
             {
+                if (_translationWindow is OverlayWindow overlay)
+                {
+                    // RF-349 / RF-350 — a janela acompanha a união das áreas, sem encolher
+                    // no meio da tradução.
+                    overlay.FitTo(_session.Regions.Build().Captures);
+                    overlay.SetBlocks(BuildOverlayBlocks(result, overlay));
+                    return;
+                }
+
                 // Passo 17 — a memória de exibição é aplicada ao texto final.
                 string text = _displayMemory.Apply(result.DisplayText);
 
@@ -562,9 +579,12 @@ public partial class MainWindow : Window
         _displayMemory.Capacity = _session.Advanced.DisplayMemoryCount;
         _displayMemory.LifetimeSeconds = _session.Advanced.DisplayMemoryLifetimeSeconds;
 
-        _translationWindow = mode == WindowMode.Layer
-            ? CreateLayerWindow()
-            : CreateDarkWindow();
+        _translationWindow = mode switch
+        {
+            WindowMode.Layer => CreateLayerWindow(),
+            WindowMode.Overlay => CreateOverlayWindow(),
+            _ => CreateDarkWindow(),
+        };
 
         _translationWindow.SetAlwaysOnTop(_session.Options.TranslationWindowAlwaysOnTop);
         return _translationWindow;
@@ -623,6 +643,91 @@ public partial class MainWindow : Window
         return window;
     }
 
+    /// <summary>
+    /// 19.4 — Janela de sobreposição, que cobre a união dos monitores e é sempre no topo.
+    /// </summary>
+    private ITranslationWindow CreateOverlayWindow()
+    {
+        var window = new OverlayWindow(_session.Platform.WindowEffects);
+
+        var surface = window.Canvas;
+        surface.FontFamilyName = Gort.Core.Rendering.FontResolution.Resolve(
+            _session.Profile.FontFamily, null, _session.Catalog.FontFallbacks, IsFontAvailable);
+        surface.FixedFontSize = _session.Profile.FontSize;
+        surface.TextColor = _session.Profile.TextColor;
+        surface.Stroke1Color = _session.Profile.Stroke1Color;
+        surface.Stroke2Color = _session.Profile.Stroke2Color;
+        surface.BackgroundColor = _session.Profile.BackgroundColor;
+
+        surface.FontStroke = _session.Advanced.FontStroke;
+        surface.UseBackground = _session.Profile.TextBackground;
+        surface.UseBackgroundTransparency = _session.Advanced.UseBackgroundTransparency;
+        surface.AutoFontSize = _session.Advanced.AutoFontSize;
+        surface.MinFontSize = _session.Advanced.AutoFontSizeMin;
+        surface.MaxFontSize = _session.Advanced.AutoFontSizeMax;
+        surface.PreserveOrientation = _session.Advanced.PreserveOrientation;
+        surface.Scale = _session.Profile.Scale;
+
+        var primary = _session.Platform.Monitors.Monitors.FirstOrDefault(m => m.IsPrimary);
+        surface.VerticalDpi = primary?.Dpi ?? Gort.Core.Calibration.P.ReferenceDpi;
+
+        return window;
+    }
+
+    /// <summary>
+    /// Converte o resultado do ciclo nos blocos que a sobreposição desenha.
+    ///
+    /// RF-352 a RF-354 — cada bloco vira um retângulo em coordenadas da janela, recortado
+    /// pela área de OCR; os que ficam sem área são descartados.
+    /// </summary>
+    private List<OverlayBlock> BuildOverlayBlocks(CycleResult result, OverlayWindow window)
+    {
+        var blocks = new List<OverlayBlock>();
+
+        var windowRect = new Gort.Core.Model.Rect(
+            window.Position.X, window.Position.Y,
+            (int)window.Bounds.Width, (int)window.Bounds.Height);
+
+        double scale = _session.Profile.Scale;
+        var monitors = _session.Platform.Monitors.Monitors;
+
+        foreach (var region in result.Regions)
+        {
+            // RF-074 / RF-075 — a espessura da borda vem da escala do monitor da área.
+            var metrics = Gort.Core.Regions.FrameGeometry.MetricsFor(
+                Gort.Platform.Monitors.MonitorGeometry.ScaleOf(monitors, region.ScreenRect));
+
+            for (int i = 0; i < region.Blocks.Count; i++)
+            {
+                var block = region.Blocks[i];
+                if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+
+                var rect = Gort.Core.Rendering.OverlayGeometry.BlockRect(
+                    block.SourceBox, region.ScreenRect, scale, windowRect, metrics.Border);
+
+                // RF-354 — recortado pela área; sem área, descartado.
+                var areaInWindow = region.ScreenRect.Offset(-windowRect.X, -windowRect.Y);
+                rect = Gort.Core.Rendering.OverlayGeometry.ClipToArea(rect, areaInWindow);
+                if (rect.IsEmpty) continue;
+
+                blocks.Add(new OverlayBlock
+                {
+                    Text = block.TranslatedText!,
+                    ViewRect = rect,
+                    IsTitle = block.IsTitle,
+                    Orientation = block.Orientation,
+                    OwnMedianSize = Gort.Core.Rendering.OverlayTextLayout.MedianLineSize(
+                        block.Lines, block.Orientation),
+                    AutoColor = region.UsesAutoColor && i < region.AutoColors.Count
+                        ? region.AutoColors[i]
+                        : null,
+                });
+            }
+        }
+
+        return blocks;
+    }
+
     /// <summary>RF-387 — Consulta ao sistema se uma família de fonte existe.</summary>
     private static bool IsFontAvailable(string family)
     {
@@ -644,6 +749,9 @@ public partial class MainWindow : Window
                 layer.HideInsteadOfClose = false;
                 layer.Close();
                 break;
+            case OverlayWindow overlay:
+                overlay.Close();
+                break;
         }
         _translationWindow = null;
     }
@@ -659,7 +767,14 @@ public partial class MainWindow : Window
         if (SourceBox.SelectedItem is string source) _session.Profile.OcrLanguage = source;
         if (TargetBox.SelectedItem is string target) _session.Profile.TargetLanguage = target;
         if (WindowModeBox.SelectedItem is string mode)
-            _session.Profile.WindowMode = mode == "camada" ? WindowMode.Layer : WindowMode.Dark;
+        {
+            _session.Profile.WindowMode = mode switch
+            {
+                "camada" => WindowMode.Layer,
+                "sobreposição" => WindowMode.Overlay,
+                _ => WindowMode.Dark,
+            };
+        }
 
         // RF-148 — os ajustes automáticos vêm das PROPRIEDADES do idioma, não do seu nome.
         var language = _session.Catalog.Language(_session.Profile.OcrLanguage);

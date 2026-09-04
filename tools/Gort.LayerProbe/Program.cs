@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using Gort.App;
 using Gort.App.Windows;
 using Gort.Core.Calibration;
+using Gort.App.Windows;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Teste visual da ETAPA 11 — modo camada.
@@ -78,3 +79,103 @@ Console.WriteLine($"Contorno externo P-80 = {P.OuterStrokeWidth} px na cor de co
 Console.WriteLine($"Contorno interno P-81 = {P.InnerStrokeWidth} px na cor de contorno 1");
 Console.WriteLine($"Fundo expandido em {P.LayerBackgroundExpandLeft}/{P.LayerBackgroundExpandTop}/" +
                   $"{P.LayerBackgroundExpandWidth}/{P.LayerBackgroundExpandHeight} (P-82 a P-85)");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ETAPA 12 — modo sobreposição.
+//
+// Exercita, juntos, a resolução de colisões (RF-355 a RF-358), o tamanho
+// automático de fonte (RF-360 a RF-363), a quebra por caractere (RF-369) e o
+// desenho com contorno duplo — sobre um cenário que reproduz o caso mais comum
+// do produto: um nome de personagem curto acima de uma fala longa.
+// ─────────────────────────────────────────────────────────────────────────────
+
+Console.WriteLine();
+Console.WriteLine("Sobreposição (Etapa 12)");
+Console.WriteLine(new string('─', 70));
+
+void RenderOverlay(string name, Action<OverlaySurface> configure,
+                   Func<IReadOnlyList<OverlayBlock>> blocks)
+{
+    var surface = new OverlaySurface
+    {
+        Width = 760,
+        Height = 260,
+        Translating = true,
+        FontStroke = true,
+        AutoFontSize = true,
+        Scale = 2.0,
+        VerticalDpi = 96,
+    };
+    configure(surface);
+    surface.SetBlocks(blocks());
+
+    surface.Measure(new Size(760, 260));
+    surface.Arrange(new Rect(0, 0, 760, 260));
+
+    var bitmap = new RenderTargetBitmap(new PixelSize(760, 260), new Vector(96, 96));
+    bitmap.Render(surface);
+
+    string path = Path.Combine(outputDir, name + ".png");
+    bitmap.Save(path);
+
+    var lista = surface.Blocks;
+    Console.WriteLine($"  {name}");
+    foreach (var b in lista)
+    {
+        Console.WriteLine($"     {(b.IsTitle ? "título " : "bloco  ")}{b.ViewRect} " +
+                          $"fonte {b.FinalFontSize:0.0} pt · {b.Lines.Count} linha(s)" +
+                          $"{(b.Clipped ? " · RECORTADO" : "")}");
+    }
+    Console.WriteLine($"     layout {surface.LastLayoutMs:0.0} ms · desenho {surface.LastDrawMs:0.0} ms · " +
+                      $"cache {surface.LastCacheHits} acertos / {surface.LastCacheMisses} erros");
+}
+
+// Nome de personagem curto sobre fala longa, com os retângulos SE SOBREPONDO — é o
+// caso que RF-357 protege: o título preserva o retângulo e a fala cede.
+IReadOnlyList<OverlayBlock> Cena() => new[]
+{
+    new OverlayBlock
+    {
+        Text = "Ana",
+        ViewRect = new Gort.Core.Model.Rect(30, 24, 190, 46),
+        IsTitle = true,
+        Orientation = Gort.Core.Model.Orientation.Horizontal,
+        OwnMedianSize = 44,
+    },
+    new OverlayBlock
+    {
+        Text = "Não consigo acreditar no que acabou de acontecer aqui. Precisamos sair agora.",
+        ViewRect = new Gort.Core.Model.Rect(150, 30, 560, 120),
+        IsTitle = false,
+        Orientation = Gort.Core.Model.Orientation.Horizontal,
+        OwnMedianSize = 40,
+    },
+    new OverlayBlock
+    {
+        Text = "Pressione qualquer tecla para continuar",
+        ViewRect = new Gort.Core.Model.Rect(30, 180, 400, 50),
+        IsTitle = false,
+        Orientation = Gort.Core.Model.Orientation.Horizontal,
+        OwnMedianSize = 28,
+    },
+};
+
+RenderOverlay("05-sobreposicao", _ => { }, Cena);
+
+// RF-413 / RF-393 — com cor automática, a fonte vem da análise e os contornos são
+// derivados dela.
+RenderOverlay("06-sobreposicao-cor-automatica", _ => { }, () => Cena()
+    .Select(b => new OverlayBlock
+    {
+        Text = b.Text,
+        ViewRect = b.ViewRect,
+        IsTitle = b.IsTitle,
+        Orientation = b.Orientation,
+        OwnMedianSize = b.OwnMedianSize,
+        AutoColor = new Gort.Core.Model.AutoColorResult(
+            Font: new Gort.Core.Model.Rgba(255, 232, 120),
+            Background: new Gort.Core.Model.Rgba(16, 24, 64, 200),
+            SupportingWords: 4, Contrast: 8.2,
+            UsedFallback: false, ContrastCorrected: false),
+    })
+    .ToList());

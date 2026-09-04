@@ -202,6 +202,16 @@ public sealed class AppSession : IDisposable
             NumberAreas = Profile.NumberAreas,
             // RF-098 — a imagem original só é pedida no modo sobreposição com cor automática.
             NeedsOriginalImage = Profile.WindowMode == WindowMode.Overlay && Advanced.AutoColor,
+
+            // RF-413 — as duas cores automáticas são independentes e ficam sob a caixa mestre.
+            AutoColor = new Gort.Core.ColorAnalysis.AutoColorOptions
+            {
+                Enabled = Advanced.AutoColor,
+                FontColor = Advanced.AutoFontColor,
+                BackgroundColor = Advanced.AutoBackgroundColor,
+                TextBackgroundEnabled = Profile.TextBackground,
+                BackgroundAlpha = Profile.BackgroundColor.A,
+            },
         };
     }
 
