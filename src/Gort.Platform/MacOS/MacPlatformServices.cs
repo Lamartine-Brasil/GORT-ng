@@ -37,6 +37,7 @@ internal sealed class MacPlatformServices : IPlatformServices
     public ScreenCapture Capture { get; }
     public IMonitorProvider Monitors { get; }
     public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; }
+    public IWindowEffects WindowEffects { get; } = new MacWindowEffects();
 
     /// <summary>RF-576 — Tudo apurado uma única vez, na inicialização.</summary>
     private static CapabilityReport Detect(IMonitorProvider monitors)

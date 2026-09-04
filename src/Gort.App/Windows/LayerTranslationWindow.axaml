@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:w="clr-namespace:Gort.App.Windows"
+        x:Class="Gort.App.Windows.LayerTranslationWindow"
+        Title="Tradução"
+        Width="973" Height="192"
+        MinWidth="200" MinHeight="100"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent">
+  <w:LayerTextSurface x:Name="Surface" />
+</Window>

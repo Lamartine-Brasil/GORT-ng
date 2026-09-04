@@ -40,11 +40,18 @@ public partial class App : Application
 
         try
         {
+            splash.ReportStep("verificando o desenho de texto…");
+
+            // RF-007 — a verificação é na thread de interface, porque é ela que desenha.
+            string? vectorFailure = VectorTextCheck.Apply();
+
             splash.ReportStep("carregando catálogo e perfil…");
 
             // A inicialização sai da thread de interface para que a tela de abertura
             // continue desenhando: ela existe justamente para cobrir esta espera.
             session = await Task.Run(() => AppSession.Create());
+
+            if (vectorFailure is not null) session.Notices.Add(vectorFailure);
 
             splash.ReportStep($"motores de OCR: " +
                               string.Join(", ", session.Engines.Available.Select(e => e.Key)));

@@ -11,6 +11,7 @@ using Gort.Platform.Input;
 // Só o tipo de que este arquivo precisa de Gort.Core.Model: importar o espaço inteiro
 // traria `Rect`, que colide com o do Avalonia.
 using ShortcutAction = Gort.Core.Model.ShortcutAction;
+using WindowMode = Gort.Core.Structuring.WindowMode;
 using Gort.Engine;
 using Gort.Core.Structuring;
 using Gort.Platform.Capabilities;
@@ -27,10 +28,11 @@ namespace Gort.App;
 public partial class MainWindow : Window
 {
     private readonly AppSession _session;
-    private DarkTranslationWindow? _translationWindow;
+    private ITranslationWindow? _translationWindow;
     private readonly TranslationLoop _loop;
     private readonly DisplayMemory _displayMemory = new();
     private RemoteControlWindow? _remote;
+    private WindowMode _windowMode;
     private bool _busy;
 
     public MainWindow() : this(AppSession.Create()) { }
@@ -58,7 +60,7 @@ public partial class MainWindow : Window
         ClearAreasButton.Click += (_, _) => { _session.Regions.ClearAll(); ShowAreas(); };
         TranslateOnceButton.Click += async (_, _) => await TranslateOnceAsync();
         ApplyButton.Click += (_, _) => Apply();
-        ShowWindowButton.Click += (_, _) => TranslationWindow().Show();
+        ShowWindowButton.Click += (_, _) => { TranslationWindow(); ShowTranslationWindow(); };
 
         // RF-560 — o indicador de memória é amostrado em intervalo fixo e NUNCA dentro do
         // ciclo de tradução: lê-lo no ciclo custaria latência justamente onde ela importa.
@@ -134,6 +136,11 @@ public partial class MainWindow : Window
         TargetBox.ItemsSource = _session.Catalog
             .LanguagesFor(service, targetList: true).Select(l => l.Key).ToList();
         TargetBox.SelectedItem = _session.Profile.TargetLanguage;
+
+        // RF-317 — os três modos de janela. A sobreposição entra na Etapa 12.
+        WindowModeBox.ItemsSource = new[] { "escuro", "camada" };
+        WindowModeBox.SelectedItem =
+            _session.Profile.WindowMode == WindowMode.Layer ? "camada" : "escuro";
     }
 
     private void ShowAreas()
@@ -216,7 +223,7 @@ public partial class MainWindow : Window
         try
         {
             var window = TranslationWindow();
-            window.Show();
+            ShowTranslationWindow();
             window.SetRunning(true);
 
             var areas = _session.Regions.Build();
@@ -351,10 +358,53 @@ public partial class MainWindow : Window
                 break;
 
             case ShortcutAction.ToggleTranslationWindow:
-                if (_translationWindow is { IsVisible: true }) _translationWindow.Hide();
-                else TranslationWindow().Show();
+                if (_translationWindow is Window { IsVisible: true } visible) visible.Hide();
+                else ShowTranslationWindow();
                 break;
         }
+    }
+
+    /// <summary>
+    /// RF-340 / RF-045 — Guarda a posição e o tamanho atuais do modo camada no perfil.
+    /// </summary>
+    private void CaptureLayerPlacement()
+    {
+        if (_translationWindow is not LayerTranslationWindow layer) return;
+
+        _session.Profile.LayerX = layer.Position.X;
+        _session.Profile.LayerY = layer.Position.Y;
+        _session.Profile.LayerWidth = (int)layer.Bounds.Width;
+        _session.Profile.LayerHeight = (int)layer.Bounds.Height;
+    }
+
+    private void ShowTranslationWindow()
+    {
+        if (_translationWindow is Window window) window.Show();
+    }
+
+    /// <summary>
+    /// RF-343 — Avisa quando a janela de tradução intersecta alguma área de OCR: ela estaria
+    /// sendo capturada e traduzindo a si mesma. Só vale nos modos escuro e camada, com
+    /// captura de tela; no modo sobreposição a janela é excluída da captura.
+    /// </summary>
+    private void WarnIfWindowOverlapsAreas()
+    {
+        if (_session.Profile.WindowMode == WindowMode.Overlay) return;
+        if (_session.Profile.CaptureActiveWindow) return;
+        if (_translationWindow is not Window window) return;
+
+        var rect = new Gort.Core.Model.Rect(
+            window.Position.X, window.Position.Y,
+            (int)window.Bounds.Width, (int)window.Bounds.Height);
+
+        var areas = _session.Regions.Build().Captures;
+        if (!Gort.Core.Rendering.LayerLayout.WouldCaptureItself(rect, areas)) return;
+
+        const string aviso = "A janela de tradução está sobre uma área de OCR: " +
+                             "ela será capturada e traduzida a si mesma. Mova-a para fora.";
+
+        if (_translationWindow is LayerTranslationWindow layer) layer.WarnAboutSelfCapture(aviso);
+        ResultText.Text = aviso;
     }
 
     /// <summary>P-05 a P-09 — As cinco velocidades, da mais rápida à mais lenta.</summary>
@@ -423,8 +473,12 @@ public partial class MainWindow : Window
 
         // Passo 3 — a janela de tradução é preparada.
         var window = TranslationWindow();
-        window.Show();
+        ShowTranslationWindow();
         window.Clear();
+
+        // RF-343 — nos modos escuro e camada, com captura de tela, a janela sobre uma área
+        // de OCR seria capturada e traduzida a si mesma.
+        WarnIfWindowOverlapsAreas();
 
         // RF-071 — ao iniciar uma tradução que não é instantânea, a memória de "último
         // instantâneo" é apagada.
@@ -463,7 +517,7 @@ public partial class MainWindow : Window
                 _translationWindow?.Show(text, result.RecognizedText);
             }),
 
-            Repaint = () => Dispatcher.UIThread.Post(() => _translationWindow?.InvalidateVisual()),
+            Repaint = () => Dispatcher.UIThread.Post(() => _translationWindow?.Repaint()),
 
             ReportError = message => Dispatcher.UIThread.Post(() =>
                 ResultText.Text = $"erro no laço: {message}"),
@@ -489,23 +543,109 @@ public partial class MainWindow : Window
             _translationWindow?.SetAlwaysOnTop(running);
     }
 
-    private DarkTranslationWindow TranslationWindow()
+    /// <summary>
+    /// RF-317 / RF-318 — Os modos de janela são trocáveis a qualquer momento, e trocar de
+    /// modo DESTRÓI a janela anterior e cria a nova. Elas não compartilham estado visual:
+    /// uma tem fundo opaco e barra de status, a outra é transparente e atravessável.
+    /// </summary>
+    private ITranslationWindow TranslationWindow()
     {
-        if (_translationWindow is null)
-        {
-            _translationWindow = new DarkTranslationWindow
-            {
-                ShowRecognizedText = _session.Profile.ShowRecognizedText,
-            };
-            _translationWindow.SetAlwaysOnTop(_session.Options.TranslationWindowAlwaysOnTop);
-            _translationWindow.SetFont(_session.Advanced.DarkModeFont, _session.Profile.FontSize);
+        var mode = _session.Profile.WindowMode;
 
-            // RF-222 / RF-223 — memória de exibição, conforme as opções avançadas.
-            _displayMemory.Enabled = _session.Advanced.DisplayMemoryEnabled;
-            _displayMemory.Capacity = _session.Advanced.DisplayMemoryCount;
-            _displayMemory.LifetimeSeconds = _session.Advanced.DisplayMemoryLifetimeSeconds;
-        }
+        if (_translationWindow is not null && _windowMode == mode) return _translationWindow;
+
+        DestroyTranslationWindow();
+        _windowMode = mode;
+
+        // RF-222 / RF-223 — memória de exibição, conforme as opções avançadas.
+        _displayMemory.Enabled = _session.Advanced.DisplayMemoryEnabled;
+        _displayMemory.Capacity = _session.Advanced.DisplayMemoryCount;
+        _displayMemory.LifetimeSeconds = _session.Advanced.DisplayMemoryLifetimeSeconds;
+
+        _translationWindow = mode == WindowMode.Layer
+            ? CreateLayerWindow()
+            : CreateDarkWindow();
+
+        _translationWindow.SetAlwaysOnTop(_session.Options.TranslationWindowAlwaysOnTop);
         return _translationWindow;
+    }
+
+    private ITranslationWindow CreateDarkWindow()
+    {
+        var window = new DarkTranslationWindow
+        {
+            ShowRecognizedText = _session.Profile.ShowRecognizedText,
+        };
+        window.SetFont(_session.Advanced.DarkModeFont, _session.Profile.FontSize);
+        return window;
+    }
+
+    private ITranslationWindow CreateLayerWindow()
+    {
+        var window = new LayerTranslationWindow(_session.Platform.WindowEffects)
+        {
+            ShowRecognizedText = _session.Profile.ShowRecognizedText,
+        };
+
+        // RF-041 / RF-340 — a posição salva é validada contra os monitores presentes; um
+        // retângulo que não intersecta nenhum monitor cai para o padrão de P-133.
+        var monitors = _session.Platform.Monitors.Monitors.Select(m => m.Bounds).ToList();
+        int screenHeight = _session.Platform.Monitors.Monitors
+            .FirstOrDefault(m => m.IsPrimary)?.Bounds.Height ?? 1080;
+
+        var placement = _session.Profile.ResolveLayerPlacement(monitors, screenHeight);
+        window.Position = new PixelPoint(placement.X, placement.Y);
+        window.Width = placement.Width;
+        window.Height = placement.Height;
+
+        // RF-387 — a família é resolvida em tempo de execução, nunca fixada por nome.
+        string family = Gort.Core.Rendering.FontResolution.Resolve(
+            _session.Profile.FontFamily,
+            systemUiFont: null,
+            _session.Catalog.FontFallbacks,
+            IsFontAvailable);
+
+        window.Configure(
+            family, _session.Profile.FontSize,
+            _session.Profile.TextColor, _session.Profile.Stroke1Color,
+            _session.Profile.Stroke2Color, _session.Profile.BackgroundColor,
+            useStroke: _session.Advanced.FontStroke || true,
+            useBackground: _session.Profile.TextBackground,
+            horizontal: _session.Profile.TextOrder == Gort.Core.Configuration.TextOrder.Center
+                ? Avalonia.Media.TextAlignment.Center
+                : _session.Profile.TextOrder == Gort.Core.Configuration.TextOrder.Right
+                    ? Avalonia.Media.TextAlignment.Right
+                    : Avalonia.Media.TextAlignment.Left,
+            vertical: _session.Advanced.LayerAlignBottom
+                ? Gort.Core.Rendering.VerticalAlignment.Bottom
+                : Gort.Core.Rendering.VerticalAlignment.Top);
+
+        return window;
+    }
+
+    /// <summary>RF-387 — Consulta ao sistema se uma família de fonte existe.</summary>
+    private static bool IsFontAvailable(string family)
+    {
+        if (string.IsNullOrWhiteSpace(family)) return false;
+        return Avalonia.Media.FontManager.Current.SystemFonts
+            .Any(f => string.Equals(f.Name, family, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>RF-318 — Trocar de modo destrói a janela anterior.</summary>
+    private void DestroyTranslationWindow()
+    {
+        switch (_translationWindow)
+        {
+            case DarkTranslationWindow dark:
+                dark.HideInsteadOfClose = false;
+                dark.Close();
+                break;
+            case LayerTranslationWindow layer:
+                layer.HideInsteadOfClose = false;
+                layer.Close();
+                break;
+        }
+        _translationWindow = null;
     }
 
     /// <summary>
@@ -518,16 +658,24 @@ public partial class MainWindow : Window
         if (ServiceBox.SelectedItem is string service) _session.Profile.TranslationService = service;
         if (SourceBox.SelectedItem is string source) _session.Profile.OcrLanguage = source;
         if (TargetBox.SelectedItem is string target) _session.Profile.TargetLanguage = target;
+        if (WindowModeBox.SelectedItem is string mode)
+            _session.Profile.WindowMode = mode == "camada" ? WindowMode.Layer : WindowMode.Dark;
 
         // RF-148 — os ajustes automáticos vêm das PROPRIEDADES do idioma, não do seu nome.
         var language = _session.Catalog.Language(_session.Profile.OcrLanguage);
         if (language is not null) _session.Profile.ApplyLanguageProperties(language);
+
+        // RF-045 — a posição e o tamanho da janela em modo camada só são salvos quando o
+        // usuário APLICA ou salva explicitamente, nunca durante a inicialização. Capturá-los
+        // aqui, e não no fechamento, é o que respeita isso.
+        CaptureLayerPlacement();
 
         // RF-012 — a mudança passa pelo protocolo "pausar → aplicar → retomar". Se a
         // parada falhar por tempo, NADA é aplicado e o usuário é informado.
         var outcome = _loop.PauseAndResume(() =>
         {
             _session.ApplyConfiguration();
+            _session.SaveShortcuts();
             _session.SaveProfile();
         });
 
@@ -552,19 +700,14 @@ public partial class MainWindow : Window
         _loop.Stop();
         _session.Platform.Keyboard.Stop();
 
+        DestroyTranslationWindow();
+
         if (_remote is not null)
         {
             _remote.AllowClose = true;
             _remote.Close();
         }
 
-        // A janela de tradução se recusa a fechar por conta de RF-326; ao encerrar o
-        // programa de verdade, essa recusa tem de ser suspensa.
-        if (_translationWindow is not null)
-        {
-            _translationWindow.HideInsteadOfClose = false;
-            _translationWindow.Close();
-        }
         _session.Dispose();
         base.OnClosed(e);
     }

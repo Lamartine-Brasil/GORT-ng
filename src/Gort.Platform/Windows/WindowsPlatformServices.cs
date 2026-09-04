@@ -176,6 +176,8 @@ internal sealed class WindowsPlatformServices : IPlatformServices
     /// C10 — Será ligado com a implementação específica desta plataforma; até lá, o gancho
     /// é inerte e explica o motivo, e o usuário opera pelo controle remoto (RF-569).
     /// </summary>
+    public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
+
     public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; } =
         new Gort.Platform.Input.InactiveKeyboardHook(
             "O interceptador global de teclado ainda não está ligado nesta plataforma.");

@@ -20,9 +20,10 @@ Gort.sln
 ├── tools/
 │   ├── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
 │   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
-│   └── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
+│   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
+│   └── Gort.LayerProbe/        desenho do modo camada, fora da tela (Etapa 11)
 └── tests/
-    ├── Gort.Core.Tests/        372 testes
+    ├── Gort.Core.Tests/        397 testes
     ├── Gort.Platform.Tests/     27 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
@@ -40,6 +41,7 @@ Gort.sln
 | **7 — Um serviço de tradução e o modo escuro** | RF-225 a RF-248, RF-308 a RF-331 | **Completa.** É o *primeiro produto utilizável de ponta a ponta*: captura, reconhece, traduz e mostra numa janela. |
 | **8 — Laço, controle e detecção de mudança 🔒** | RF-004, RF-005, RF-009 a RF-014, RF-192 a RF-205, RF-547 a RF-551 | **Completa.** Tradução contínua, protocolo de pausa e os três critérios de aceite do capítulo 9 verificados. |
 | **9 — Atalhos e controle remoto** | RF-436 a RF-453, RF-517 a RF-522 | **Lógica completa e verificada.** O controle remoto funciona; os atalhos globais dependem de permissão de Acessibilidade, ausente nesta máquina. |
+| **11 — Modo camada** | RF-007, RF-332 a RF-343, RF-387 a RF-391 | **Completa e verificada** por renderização fora da tela: contorno duplo, fundo do texto, transparência e borda de destaque. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -62,7 +64,6 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 11 — Modo camada | RF-007, RF-332 a RF-343, RF-387 a RF-391 | |
 | 12 — Modo sobreposição, layout | RF-344 a RF-386, RF-392 | Colisões, tamanho automático de fonte, quebra por caractere. |
 | 14 — Demais motores de OCR | RF-122 a RF-140, RF-147 a RF-151 | |
 | 15 — Demais serviços de tradução | RF-249 a RF-307 | |
@@ -215,6 +216,26 @@ O controle remoto **funciona e foi verificado**: `Área · Instantâneo · Inici
 com iniciar e parar ocupando o mesmo lugar (RF-517), movível por qualquer ponto e
 redimensionável mantendo a proporção (RF-518).
 
+## O modo camada
+
+Uma janela transparente e sem bordas, que o usuário posiciona onde quiser. Parada, tem fundo
+semitransparente (P-79) e uma borda de destaque para ser encontrada e movida; traduzindo,
+fica invisível exceto pelo texto e **deixa os cliques passarem** (RF-333, RF-334).
+
+O contorno duplo de RF-336 é desenhado como caminho vetorial, na ordem que o requisito
+determina: externo de P-80 = 5 px na cor de contorno 2, interno de P-81 = 2 px na cor de
+contorno 1, e só então o preenchimento. É essa ordem que produz a moldura em duas camadas
+que mantém o texto legível sobre qualquer fundo de jogo.
+
+**Verificado por renderização fora da tela** (`tools/Gort.LayerProbe`), com o mesmo motor de
+desenho que a aplicação usa em tela. Quatro estados gravados em PNG: parada, traduzindo, sem
+contorno e sem fundo. É o tipo de coisa que só se vê a olho, e a ferramenta torna a
+verificação repetível.
+
+RF-007 passa: o desenho vetorial funciona, inclusive com a parte japonesa da cadeia de teste.
+Quando falha, o contorno é desativado em todo o programa e o texto continua legível, sem a
+moldura.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -287,7 +308,13 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     debaixo da janela que o usuário está traduzindo — e RF-517 exige que ela esteja
     *sempre acessível*.
 
-14. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+14. **Apelidos para tipos que colidem com o Avalonia.** `Rect`, `VerticalAlignment` e
+    `HorizontalAlignment` existem nos dois mundos — no do programa e no da biblioteca de
+    interface. Os três são apelidados explicitamente onde convivem, em vez de a distinção
+    depender da ordem dos `using` ou de qual membro herdado vence. `HorizontalAlignment` em
+    particular *ocultava* silenciosamente uma propriedade de layout do próprio `Control`.
+
+15. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.

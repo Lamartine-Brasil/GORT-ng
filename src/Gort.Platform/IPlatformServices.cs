@@ -29,6 +29,9 @@ public interface IPlatformServices : IDisposable
     /// <summary>C18 — Monitores e suas escalas.</summary>
     IMonitorProvider Monitors { get; }
 
+    /// <summary>C5, C7 e C8 — Efeitos de janela alternáveis em tempo de execução.</summary>
+    IWindowEffects WindowEffects { get; }
+
     /// <summary>
     /// C10 — Atalho global de teclado. Quando indisponível, o gancho é inerte e explica o
     /// motivo; o usuário opera pelo controle remoto (RF-569).
@@ -94,6 +97,8 @@ internal sealed class UnsupportedPlatformServices : IPlatformServices
 
     public Input.IGlobalKeyboardHook Keyboard { get; } = new Input.InactiveKeyboardHook(
         "Este sistema operacional ainda não tem implementação da camada de plataforma.");
+
+    public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
 
     public CapabilityStatus RequestPermission(Capability capability) => Capabilities[capability];
 

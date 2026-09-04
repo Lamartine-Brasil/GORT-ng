@@ -68,6 +68,12 @@ public partial class DarkTranslationWindow : Window, ITranslationWindow
     public void Clear() => Body.Text = "";
 
     /// <summary>
+    /// RF-196 — No modo escuro o repintar ocioso é inócuo: não há geometria derivada da
+    /// posição das áreas de OCR para reposicionar, ao contrário da sobreposição.
+    /// </summary>
+    public void Repaint() { }
+
+    /// <summary>
     /// RF-327 — Indicador visível de "parado". Fica à vista porque, no modo escuro, uma
     /// janela sem texto novo é indistinguível de uma janela que parou de traduzir.
     /// </summary>
@@ -108,4 +114,11 @@ public interface ITranslationWindow
     void Clear();
     void SetRunning(bool running);
     void SetAlwaysOnTop(bool value);
+
+    /// <summary>
+    /// RF-196 / RF-197 — Repintar OCIOSO: o texto não mudou, mas a geometria pode ter
+    /// mudado — o usuário moveu a área de OCR, ou a janela alvo se moveu. Reutiliza os
+    /// dados já calculados; NÃO dispara OCR, tradução nem análise de cor.
+    /// </summary>
+    void Repaint();
 }
