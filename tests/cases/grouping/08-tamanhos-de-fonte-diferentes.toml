@@ -1,0 +1,31 @@
+# RF-163 condição 2 e RF-176 — um cabeçalho visivelmente maior não é absorvido pelo
+# corpo: a razão de tamanho de fonte ultrapassa P-34 e P-44.
+name = "tamanhos_de_fonte_diferentes"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "CAPITULO UM DA HISTORIA"
+x = 100
+y = 100
+font = 48
+
+[[line]]
+text = "era uma vez em um reino"
+x = 100
+y = 160
+font = 20
+
+[[line]]
+text = "muito muito distante daqui"
+x = 100
+y = 185
+font = 20
+
+[[block]]
+lines = [0]
+title = false
+
+[[block]]
+lines = [1, 2]
+title = false

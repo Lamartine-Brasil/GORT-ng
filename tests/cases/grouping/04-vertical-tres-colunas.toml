@@ -1,0 +1,34 @@
+# Critério de aceite do capítulo 15:
+# "Um texto vertical japonês em três colunas é lido da direita para a esquerda."
+#
+# As colunas são declaradas da ESQUERDA para a direita; a saída esperada as põe na
+# ordem inversa, que é a ordem de leitura (RF-160).
+name = "vertical_tres_colunas"
+merge_lines = true
+remove_spaces = true
+
+[[line]]
+text = "三 番 目 の 列 で す"
+x = 200
+y = 100
+font = 24
+orientation = "vertical"
+
+[[line]]
+text = "二 番 目 の 列 で す"
+x = 240
+y = 100
+font = 24
+orientation = "vertical"
+
+[[line]]
+text = "一 番 目 の 列 で す"
+x = 280
+y = 100
+font = 24
+orientation = "vertical"
+
+# Um único bloco, com as linhas na ordem de leitura: direita → esquerda.
+[[block]]
+lines = [2, 1, 0]
+title = false

@@ -1,0 +1,25 @@
+# RF-171 — Título explícito por delimitação. O nome entre colchetes de canto
+# tipográficos é o formato mais comum em visual novels japonesas.
+name = "titulo_explicito"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "「アリス」"
+x = 100
+y = 200
+font = 24
+
+[[line]]
+text = "とても long dialogue line here"
+x = 100
+y = 232
+font = 24
+
+[[block]]
+lines = [0]
+title = true
+
+[[block]]
+lines = [1]
+title = false

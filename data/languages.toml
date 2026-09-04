@@ -1,0 +1,83 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Tabela de idiomas — RF-308 a RF-316.
+#
+# Este arquivo é DADO, não código (RF-029). Acrescentar um idioma é acrescentar
+# uma entrada aqui; nada no núcleo do programa muda (RF-312, RF-566).
+#
+# Campos de cada idioma:
+#   key           identificador textual estável, minúsculo, sem espaços (RF-027).
+#                 Um identificador já publicado nunca é reaproveitado.
+#   name_key      chave da tabela de localização com o nome exibido (RF-308).
+#   ocr           código usado pelos motores de OCR.
+#   codes.<serv>  código usado por cada serviço de tradução. Um código AUSENTE ou
+#                 VAZIO significa que aquele serviço não oferece este idioma, e o
+#                 idioma não aparece na lista dele (RF-308, RF-511).
+#
+# Propriedades de que o pipeline depende (RF-311). São ELAS, e não o
+# identificador do idioma, que governam os comportamentos automáticos de RF-148
+# e RF-324 — nenhum ponto do programa compara com "ja" ou "en" (RF-567).
+#   separates_words_by_space   RF-148: quando falso, ativa a remoção de espaços e
+#                              desativa o dicionário por palavra.
+#   supports_vertical          admite escrita vertical.
+#   right_to_left              RF-324: liga a direção da direita para a esquerda.
+#
+# RF-309 — Escopo desta versão: traduz de japonês e de inglês para português do
+# Brasil. É decisão de produto, não limitação de arquitetura (RF-310).
+# ─────────────────────────────────────────────────────────────────────────────
+
+schema_version = 1
+
+# RF-314 — Idioma de destino padrão. RF-313 — aparece em primeiro lugar nas
+# listas de destino.
+default_target = "pt-BR"
+
+[[language]]
+key = "en"
+name_key = "lang.en"
+ocr = "eng"
+separates_words_by_space = true
+supports_vertical = false
+right_to_left = false
+  [language.codes]
+  webfree       = "en"
+  commercial_kr = "en"
+  webfree_kr    = "en"
+  spreadsheet   = "en"
+  browser       = "en"
+  commercial_eu = "EN"
+  llm           = "English"
+  customapi     = "en"
+
+[[language]]
+key = "ja"
+name_key = "lang.ja"
+ocr = "jpn"
+separates_words_by_space = false
+supports_vertical = true
+right_to_left = false
+  [language.codes]
+  webfree       = "ja"
+  commercial_kr = "ja"
+  webfree_kr    = "ja"
+  spreadsheet   = "ja"
+  browser       = "ja"
+  commercial_eu = "JA"
+  llm           = "Japanese"
+  customapi     = "ja"
+
+[[language]]
+key = "pt-BR"
+name_key = "lang.pt-BR"
+ocr = "por"
+separates_words_by_space = true
+supports_vertical = false
+right_to_left = false
+  [language.codes]
+  webfree       = "pt"
+  commercial_kr = "pt"
+  webfree_kr    = "pt"
+  spreadsheet   = "pt"
+  browser       = "pt"
+  commercial_eu = "PT-BR"
+  llm           = "Brazilian Portuguese"
+  customapi     = "pt-BR"

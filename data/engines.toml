@@ -1,0 +1,242 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Motores de OCR e serviços de tradução — RF-029, RF-121, RF-241 a RF-307.
+#
+# DADO, não código. Acrescentar um motor ou um serviço é acrescentar uma entrada
+# aqui mais a implementação do adaptador correspondente aos contratos da Parte II
+# (RF-566). Nenhuma alteração no laço, no agrupamento, no cache ou na renderização
+# pode ser necessária para isso.
+#
+# Os identificadores são estáveis, minúsculos, sem espaços e independentes do
+# idioma da interface (RF-027). Um identificador desconhecido lido de um arquivo
+# não impede o carregamento: o campo assume o padrão e o usuário é informado uma
+# vez (RF-028).
+# ─────────────────────────────────────────────────────────────────────────────
+
+schema_version = 1
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Motores de OCR — RF-121
+#
+#   word_positions   devolve posição por palavra. O modo sobreposição só é
+#                    permitido com motores que devolvem posição (RF-351).
+#   line_positions   devolve posição por linha.
+#   needs_network    exige rede.
+#   realtime         pode ser usado em tradução em tempo real. O motor de nuvem
+#                    NÃO pode (RF-122).
+# ═══════════════════════════════════════════════════════════════════════════
+
+[[ocr_engine]]
+key = "classic"
+name_key = "ocr.classic"
+needs_network = false
+word_positions = true
+line_positions = true
+realtime = true
+# Requer arquivos de dados de idioma; suporta variantes "rápidas" para inglês e
+# japonês (RF-150).
+languages = ["en", "ja"]
+
+[[ocr_engine]]
+key = "system"
+name_key = "ocr.system"
+needs_network = false
+word_positions = true
+line_positions = true
+realtime = true
+# Depende dos pacotes de idioma instalados no sistema; a lista real é enumerada
+# em tempo de execução (RF-136) e intersectada com esta (RF-151).
+languages = ["en", "ja"]
+
+[[ocr_engine]]
+key = "modern"
+name_key = "ocr.modern"
+needs_network = false
+word_positions = true
+line_positions = true
+realtime = true
+# Melhor qualidade local; requer modelo e biblioteca nativa presentes (RF-128).
+languages = ["en", "ja"]
+
+[[ocr_engine]]
+key = "cloud"
+name_key = "ocr.cloud"
+needs_network = true
+word_positions = true
+line_positions = true
+# RF-122 — Só pode ser usado em modo pontual.
+realtime = false
+languages = ["en", "ja"]
+
+[[ocr_engine]]
+key = "interpreted"
+name_key = "ocr.interpreted"
+needs_network = false
+word_positions = false
+line_positions = true
+realtime = true
+# Requer instalação sob demanda de um ambiente e de pacotes (RF-132).
+languages = ["en", "ja"]
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Serviços de tradução — 18.2
+#
+#   needs_network      chamada de rede (falso = consulta local a arquivo).
+#   uses_result_memory RF-214 — banco de dados local e tradutor local por
+#                      processo auxiliar NÃO usam memória de resultados.
+#   supports_bridge    RF-239/RF-259 — só a planilha em nuvem suporta tradução
+#                      ponte no nível de serviço.
+#   separator_token    RF-232 — token separador do serviço. Configurável
+#                      remotamente (RF-417).
+# ═══════════════════════════════════════════════════════════════════════════
+
+# RF-225 — O serviço de tradução PADRÃO é o tradutor web gratuito. É contra ele
+# que a latência do ciclo deve ser medida.
+default_translation_service = "webfree"
+
+[[translation_service]]
+key = "localdb"
+name_key = "svc.localdb"
+needs_network = false
+uses_result_memory = false     # RF-214
+supports_bridge = false
+uses_collection = false        # RF-221 — seria consulta duplicada
+
+[[translation_service]]
+key = "webfree"
+name_key = "svc.webfree"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "//////"     # P-51
+
+[[translation_service]]
+key = "commercial_kr"
+name_key = "svc.commercial_kr"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "//////"     # P-51
+multiple_keys = true           # RF-250
+
+[[translation_service]]
+key = "webfree_kr"
+name_key = "svc.webfree_kr"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "//////"     # P-51
+
+[[translation_service]]
+key = "spreadsheet"
+name_key = "svc.spreadsheet"
+needs_network = true
+uses_result_memory = true
+supports_bridge = true         # RF-259 — o único
+uses_collection = true
+separator_token = "//////"     # P-51
+
+[[translation_service]]
+key = "browser"
+name_key = "svc.browser"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "@@@@@@"     # P-52
+
+[[translation_service]]
+key = "commercial_eu"
+name_key = "svc.commercial_eu"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "//////"     # P-51
+
+[[translation_service]]
+key = "llm"
+name_key = "svc.llm"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "//////"     # P-51
+# RF-226 — Recurso SECUNDÁRIO. Nunca é o padrão, nunca é pré-selecionado, e
+# nenhuma outra parte do programa depende dele para funcionar.
+secondary = true
+
+[[translation_service]]
+key = "localproc"
+name_key = "svc.localproc"
+needs_network = false
+uses_result_memory = false     # RF-214
+supports_bridge = false
+uses_collection = true         # RF-291
+
+[[translation_service]]
+key = "customapi"
+name_key = "svc.customapi"
+needs_network = true
+uses_result_memory = true
+supports_bridge = false
+uses_collection = true
+separator_token = "//////"     # P-51
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-279 — Modelos de linguagem: a lista e qual deles é o padrão são DADOS de
+# configuração, atualizáveis sem recompilar. Modelos são descontinuados em
+# prazos de meses; um nome embutido no código transforma cada troca do
+# fornecedor em uma nova versão do programa.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[llm]
+default_model = "gemini-2.0-flash"
+models = [
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+]
+# RF-280 — A família é deduzida do nome: nomes começando com este prefixo usam o
+# formato de configuração de raciocínio antigo; os demais usam o novo. O porte
+# "pro" é deduzido pela presença dessa palavra no nome.
+legacy_family_prefix = "gemini-2.0"
+pro_marker = "pro"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-387 — A família de fonte padrão é resolvida em TEMPO DE EXECUÇÃO: usa-se a
+# fonte de interface do sistema operacional e, se ela não estiver disponível, a
+# primeira desta lista de reserva. Nenhum nome de fonte é fixado no código: as
+# métricas da fonte governam todo o cálculo de tamanho e de quebra de linha da
+# sobreposição (RF-357 a RF-372), e uma substituição silenciosa pelo sistema
+# mudaria o layout inteiro.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[fonts]
+fallback = [
+  "Noto Sans CJK JP",
+  "Source Han Sans",
+  "Hiragino Sans",
+  "Yu Gothic UI",
+  "Meiryo UI",
+  "Segoe UI",
+  "DejaVu Sans",
+  "Arial Unicode MS",
+]
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RF-513 / RF-544 / V.1 — Endereços externos são DADOS de configuração, nunca
+# endereços embutidos no código.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[links]
+manual = ""
+known_errors = ""
+repository = ""
+project_page = ""
+community = ""
+donation = ""
+translation_docs = ""

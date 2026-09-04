@@ -1,0 +1,68 @@
+# ─── Saída de compilação .NET ────────────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userprefs
+
+# ─── Resultados de teste e cobertura ─────────────────────────────────────────
+[Tt]est[Rr]esult*/
+coverage*
+*.trx
+*.coverage
+*.coveragexml
+
+# ─── Ferramentas e editores ──────────────────────────────────────────────────
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+
+# ─── macOS / Windows / Linux ─────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# ─── Dados do usuário e segredos ─────────────────────────────────────────────
+# RF-035 — as credenciais dos serviços de tradução ficam em TEXTO PURO, por decisão
+# explícita da especificação: o programa roda inteiramente na máquina do usuário e
+# cifrá-las localmente com uma chave também local não acrescenta proteção real.
+# Justamente por isso elas NUNCA podem entrar no controle de versão.
+credenciais/
+*.credenciais
+**/credenciais/*.toml
+
+# Perfis, memórias de tradução e retratos de depuração são dados de execução do
+# usuário (RF-020, RF-208, RF-492), não fonte do projeto.
+perfis/
+memoria/
+coletanea/
+presets/
+diagnostico/
+*.gort
+avancado.toml
+aplicativo.toml
+atalhos.toml
+
+# RF-002 — marcador que desativa a restrição de instância única; é local à máquina.
+multi-instancia
+
+# ─── Modelos de OCR ──────────────────────────────────────────────────────────
+# O modelo e a biblioteca nativa do motor de reconhecimento moderno (RF-128) são
+# baixados sob demanda e pesam dezenas de MB; não versionar binários.
+*.onnx
+lib/
+modelos/
+
+# ─── Pacotes ─────────────────────────────────────────────────────────────────
+*.nupkg
+packages/

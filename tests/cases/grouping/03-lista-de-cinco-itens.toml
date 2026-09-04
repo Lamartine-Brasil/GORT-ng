@@ -1,0 +1,51 @@
+# Critério de aceite do capítulo 15:
+# "Uma lista de cinco itens começando com '•' vira cinco blocos."
+name = "lista_de_cinco_itens"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "• espada longa"
+x = 100
+y = 100
+font = 20
+
+[[line]]
+text = "• escudo de ferro"
+x = 100
+y = 126
+font = 20
+
+[[line]]
+text = "• pocao de cura"
+x = 100
+y = 152
+font = 20
+
+[[line]]
+text = "• arco curto"
+x = 100
+y = 178
+font = 20
+
+[[line]]
+text = "• manto simples"
+x = 100
+y = 204
+font = 20
+
+[[block]]
+lines = [0]
+title = false
+[[block]]
+lines = [1]
+title = false
+[[block]]
+lines = [2]
+title = false
+[[block]]
+lines = [3]
+title = false
+[[block]]
+lines = [4]
+title = false

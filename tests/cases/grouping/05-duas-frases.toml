@@ -1,0 +1,25 @@
+# Critério de aceite do capítulo 15:
+# "Uma frase terminada em '.' seguida de outra frase gera dois blocos."
+name = "duas_frases"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "O sol nascia devagar sobre a colina."
+x = 100
+y = 200
+font = 24
+
+[[line]]
+text = "Depois tudo ficou quieto novamente"
+x = 100
+y = 230
+font = 24
+
+[[block]]
+lines = [0]
+title = false
+
+[[block]]
+lines = [1]
+title = false

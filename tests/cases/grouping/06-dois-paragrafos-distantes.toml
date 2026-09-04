@@ -1,0 +1,38 @@
+# Dois parágrafos separados por um intervalo maior que P-35 × tamanho de fonte
+# formam componentes distintos (RF-159) e nunca se fundem.
+name = "dois_paragrafos_distantes"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "primeira parte do texto aqui"
+x = 100
+y = 100
+font = 20
+
+[[line]]
+text = "continuando a primeira parte"
+x = 100
+y = 125
+font = 20
+
+# Intervalo vertical bem acima de 20 × 1,25 = 25 px.
+[[line]]
+text = "segunda parte bem distante"
+x = 100
+y = 400
+font = 20
+
+[[line]]
+text = "continuando a segunda parte"
+x = 100
+y = 425
+font = 20
+
+[[block]]
+lines = [0, 1]
+title = false
+
+[[block]]
+lines = [2, 3]
+title = false

@@ -1,0 +1,28 @@
+# Critério de aceite do capítulo 15:
+# "Um diálogo de três linhas de mesma fonte, próximas, sem pontuação final,
+#  vira UM bloco."
+name = "dialogo_tres_linhas"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "O sol nascia devagar sobre"
+x = 100
+y = 200
+font = 24
+
+[[line]]
+text = "a colina onde estavamos"
+x = 100
+y = 230
+font = 24
+
+[[line]]
+text = "esperando o barco chegar"
+x = 100
+y = 260
+font = 24
+
+[[block]]
+lines = [0, 1, 2]
+title = false

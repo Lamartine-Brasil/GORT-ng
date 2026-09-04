@@ -1,0 +1,35 @@
+# Critério de aceite do capítulo 15:
+# "Um nome de personagem curto acima de um diálogo longo vira um bloco marcado
+#  como título, separado do diálogo."
+#
+# É o caso que P-40 a P-43 e P-148 protegem: se o título gruda no corpo, o nome do
+# personagem passa a ser traduzido junto com a fala (Parte XII.4).
+name = "nome_de_personagem"
+merge_lines = true
+remove_spaces = false
+
+[[line]]
+text = "Ana"
+x = 100
+y = 200
+font = 24
+
+[[line]]
+text = "Nao consigo acreditar no que"
+x = 100
+y = 232
+font = 24
+
+[[line]]
+text = "acabou de acontecer aqui"
+x = 100
+y = 264
+font = 24
+
+[[block]]
+lines = [0]
+title = true
+
+[[block]]
+lines = [1, 2]
+title = false

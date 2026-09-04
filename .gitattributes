@@ -1,0 +1,17 @@
+# Normaliza finais de linha no repositório; a plataforma decide no checkout.
+* text=auto eol=lf
+
+*.cs      text diff=csharp
+*.csproj  text
+*.sln     text eol=crlf
+*.md      text
+*.toml    text
+
+# Arquivos de pares de tradução e dicionários são texto, mas o formato depende de
+# marcadores em linhas próprias (RF-185, RF-209): não deixar nenhuma ferramenta
+# reescrevê-los.
+*.txt     text
+
+*.onnx    binary
+*.png     binary
+*.jpg     binary
