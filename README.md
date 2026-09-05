@@ -77,6 +77,13 @@ tools/              sondas visuais: captura, OCR, ciclo completo, desenho de cam
 tests/              618 testes
 ```
 
+## Uma limitação que vale saber antes
+
+**Jogo em tela cheia exclusiva não funciona.** Nesse modo o jogo assume o controle direto da
+saída de vídeo: a sobreposição não pode ser desenhada por cima e a captura pode falhar. Use
+o jogo em **modo janela** ou em **janela sem borda** — nos dois o programa funciona
+normalmente. O aviso também aparece na primeira aba da interface.
+
 ## Construir e rodar
 
 ```bash

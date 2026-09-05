@@ -390,3 +390,6 @@ memory.regions,"Imagens de região: {0}"
 memory.cache,"Cache de traduções: {0}"
 memory.overlay,"Mapa de bits da sobreposição: {0}"
 msg.areas_invalid,"A disposição dos monitores mudou e as áreas {0} ficaram fora da tela. Corrija-as no gerenciamento de áreas — nenhuma foi movida automaticamente."
+
+# ─── PARTE VIII — o que o programa precisa documentar ────────────────────────
+ui.fullscreen,"Jogo em tela cheia exclusiva não funciona: a sobreposição não pode ser desenhada por cima e a captura pode falhar. Use o jogo em modo janela ou em janela sem borda."

@@ -53,6 +53,14 @@
               </StackPanel>
             </Border>
 
+            <!-- PARTE VIII — o programa DOCUMENTA que jogo em tela cheia exclusiva não
+                 funciona: a sobreposição não pode ser desenhada e a captura pode falhar. -->
+            <Border Background="#FFF8E1" CornerRadius="6" Padding="10"
+                    BorderBrush="#E6C86E" BorderThickness="1">
+              <TextBlock x:Name="FullscreenNotice" FontSize="12" TextWrapping="Wrap"
+                         Foreground="#5A4A10" />
+            </Border>
+
             <Border Background="White" CornerRadius="6" Padding="12" BorderBrush="#DDD" BorderThickness="1">
               <StackPanel Spacing="8">
                 <TextBlock x:Name="ServiceGroupLabel" FontWeight="SemiBold" />

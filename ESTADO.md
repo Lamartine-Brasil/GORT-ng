@@ -25,7 +25,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        601 testes
+    ├── Gort.Core.Tests/        612 testes
     ├── Gort.Platform.Tests/     39 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -34,15 +34,14 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **robustez e evolução travadas por teste**. 704 testes passando
-(601 + 39 + 36 + 28).
+**A ordem de construção da PARTE X terminou, e a PARTE VIII foi conferida linha a linha.**
+715 testes passando (612 + 39 + 36 + 28).
 
-**As 19 etapas da PARTE X estão construídas.** O que resta não é etapa, é o que depende de
-coisas de fora desta máquina:
+O que resta não é etapa: é o que depende de coisas de fora desta máquina.
 
 - **Etapa 15** — os nove serviços de tradução de RF-249 a RF-307. A maioria precisa de
-  credenciais que só o usuário tem; o repositório de chaves e os presets de API, que são a
-  parte que dá para construir sem elas, já existem.
+  credenciais que só o usuário tem; o rodízio de chaves e os presets de API, que são a parte
+  construível sem elas, já existem.
 - **Atualização automática** — RF-416 a RF-435, que precisa de um servidor de distribuição.
 - **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
   servidor da comunidade e navegador embutido.
@@ -52,8 +51,9 @@ coisas de fora desta máquina:
 - **Atalhos globais** — a lógica está verificada, mas o registro no sistema depende da
   permissão de Acessibilidade, ausente nesta máquina.
 
-Uma passada final útil seria conferir a **PARTE VIII linha a linha** contra o código, com um
-teste por situação onde ele fizer sentido.
+Pendência pequena, de acabamento: no macOS o nome do aplicativo na barra de menus aparece
+como "Avalonia Application". O título da janela está certo; o que falta é o empacotamento
+com `Info.plist`.
 
 ## Etapas concluídas
 
@@ -81,7 +81,7 @@ teste por situação onde ele fizer sentido.
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
 | **17 — Interface completa** | RF-481 a RF-546, RF-054 a RF-064, RF-250 a RF-253 | **Completa.** As sete abas de V.3 e as seis janelas de V.4 que não dependem de serviços externos, todas verificadas em imagem. |
-| **19 — Endurecimento** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-567 | **Instância única verificada na máquina**, liberação das imagens de região, indicador de memória detalhado, aviso de mudança de monitor, e a robustez e a evolução travadas por teste — inclusive uma varredura do código-fonte para RF-567. |
+| **19 — Endurecimento** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-567, PARTE VIII | **Completa.** Instância única verificada na máquina, liberação das imagens de região, indicador de memória detalhado, aviso de mudança de monitor, robustez e evolução travadas por teste — inclusive uma varredura do código-fonte para RF-567 — e a PARTE VIII conferida linha a linha. |
 
 Também prontos, transversais a tudo:
 
@@ -509,6 +509,29 @@ RF-561 a RF-567 descrevem PROPRIEDADES do programa inteiro, não uma classe. Os 
   decisão de produto declarada (RF-309), que o usuário muda na primeira tela; o que RF-567
   proíbe é o programa DECIDIR por comparação. A varredura foi verificada injetando uma
   violação e conferindo que ela falha.
+
+## A PARTE VIII, linha a linha
+
+A tabela da PARTE VIII não é uma lista de tolerâncias: cada linha diz o comportamento
+EXIGIDO. `PartVIIITests` cobre as situações que ainda não tinham teste próprio; as demais
+estão nos arquivos do assunto, citadas ali pelo requisito.
+
+As que mais valem registro:
+
+- **"Sem área de OCR definida"** — uma área de EXCLUSÃO não conta. Ela subtrai região, e a
+  subtração de nada é nada; começar a traduzir só com exclusões produziria captura vazia
+  todo ciclo e o usuário concluiria que o programa não funciona.
+- **"OCR devolve lixo instável"** — retraduzir e redesenhar a cada ciclo é o comportamento
+  EXIGIDO, não uma tolerância. Um teste trava isso: qualquer amortecimento — esperar dois
+  ciclos iguais, por exemplo — custaria um ciclo de latência em TODA tradução, inclusive nas
+  boas.
+- **"Resposta com menos partes que blocos"** — não é erro. É a diferença entre um serviço
+  que devolveu menos do que se pediu e um que falhou: o primeiro entregou o que conseguiu, e
+  descartar tudo por causa do que faltou seria jogar fora tradução boa.
+- **"Texto muito longo"** — vai INTEIRO na requisição. Se o serviço truncar, a tradução vem
+  truncada, e isso é informação para o usuário que um corte silencioso aqui esconderia.
+- **"Jogo em tela cheia exclusiva"** — a linha exige que o programa DOCUMENTE a limitação.
+  Está no README e num aviso permanente na primeira aba, verificado em captura de tela.
 
 ## Decisões registradas
 

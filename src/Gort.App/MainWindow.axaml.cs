@@ -123,6 +123,7 @@ public partial class MainWindow : Window
         DebugClearMemory.Content = _loc["debug.clear_memory"];
         DebugOpenFolder.Content = _loc["debug.open_folder"];
 
+        FullscreenNotice.Text = _loc["ui.fullscreen"];
         OcrGroupLabel.Text = _loc["basic.ocr"];
         EngineLabel.Text = _loc["basic.ocr"];
         SourceLabel.Text = _loc["translation.source"];
