@@ -203,7 +203,10 @@
             <Border Background="White" CornerRadius="6" Padding="12" BorderBrush="#DDD" BorderThickness="1">
               <StackPanel Spacing="8">
                 <TextBlock x:Name="ShortcutsLabel" FontWeight="SemiBold" />
-                <Button x:Name="AdvancedButton" Padding="14,7" HorizontalAlignment="Left" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button x:Name="AdvancedButton" Padding="14,7" />
+                  <Button x:Name="DictionaryEditorButton" Padding="14,7" />
+                </StackPanel>
                 <ItemsControl x:Name="ShortcutList" />
                 <TextBlock x:Name="ShortcutHint" Foreground="#606060" FontSize="12" TextWrapping="Wrap" />
               </StackPanel>

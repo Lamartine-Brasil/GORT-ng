@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.DictionaryEditorWindow"
+        Width="520" Height="300"
+        Background="#F4F4F6"
+        RequestedThemeVariant="Light"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <!-- RF-537 — o texto reconhecido atual já vem preenchido; o usuário digita a correção. -->
+  <DockPanel Margin="16">
+    <TextBlock x:Name="TitleText" DockPanel.Dock="Top" FontSize="16" FontWeight="SemiBold"
+               Margin="0,0,0,10" />
+
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10"
+                Margin="0,12,0,0">
+      <Button x:Name="AcceptButton" Padding="20,8" />
+      <Button x:Name="CancelButton" Padding="14,8" />
+      <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#606060"
+                 FontSize="12" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <StackPanel Spacing="6">
+      <TextBlock x:Name="FromLabel" />
+      <TextBox x:Name="FromBox" AcceptsReturn="True" Height="70" TextWrapping="Wrap" />
+      <TextBlock x:Name="ToLabel" Margin="0,6,0,0" />
+      <TextBox x:Name="ToBox" AcceptsReturn="True" Height="70" TextWrapping="Wrap" />
+    </StackPanel>
+  </DockPanel>
+</Window>

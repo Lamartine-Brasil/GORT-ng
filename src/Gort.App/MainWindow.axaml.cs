@@ -163,6 +163,7 @@ public partial class MainWindow : Window
 
         ShortcutsLabel.Text = _loc["other.shortcuts"];
         AdvancedButton.Content = _loc["other.advanced"];
+        DictionaryEditorButton.Content = _loc["dict.title"];
         HelpLabel.Text = _loc["other.help"];
         ManualButton.Content = _loc["other.manual"];
         KnownErrorsButton.Content = _loc["other.known_errors"];
@@ -278,7 +279,7 @@ public partial class MainWindow : Window
     {
         ApplyButton.Click += (_, _) => Apply();
         ShowWindowButton.Click += (_, _) => { TranslationWindow(); ShowTranslationWindow(); };
-        PreviewButton.Click += (_, _) => _ = ShowBinaryPreviewAsync();
+        PreviewButton.Click += (_, _) => OpenColorPicker();
         RestoreColorsButton.Click += (_, _) => RestoreColors();
         QuickNextButton.Click += (_, _) => _ = AdvanceQuickAsync();
 
@@ -314,6 +315,7 @@ public partial class MainWindow : Window
         WireDebugOptions();
 
         AdvancedButton.Click += (_, _) => OpenAdvancedOptions();
+        DictionaryEditorButton.Click += (_, _) => OpenDictionaryEditor();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1066,7 +1068,51 @@ public partial class MainWindow : Window
                 if (_translationWindow is Window { IsVisible: true } visible) visible.Hide();
                 else ShowTranslationWindow();
                 break;
+
+            case ShortcutAction.OpenDictionaryEditor:
+                OpenDictionaryEditor();
+                break;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RF-537 — Editor de dicionário
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private DictionaryEditorWindow? _dictionaryEditor;
+
+    /// <summary>
+    /// RF-537 — Abre o editor com o texto reconhecido ATUAL já preenchido.
+    ///
+    /// É o ponto do recurso: o usuário abre o editor no instante em que viu o OCR errar, e
+    /// o texto errado já está lá. Enquanto ele está aberto, a cópia automática para a área
+    /// de transferência fica SUSPENSA — o usuário está justamente selecionando e colando
+    /// dentro do editor, e um ciclo sobrescrevendo a área de transferência no meio disso
+    /// apagaria o que ele acabou de recortar.
+    /// </summary>
+    private void OpenDictionaryEditor()
+    {
+        if (_dictionaryEditor is not null) { _dictionaryEditor.Activate(); return; }
+
+        string path = Path.Combine(
+            _session.Paths.DataDirectory, _session.Profile.DictionaryFile);
+
+        var window = new DictionaryEditorWindow(
+            _loc, path, _session.Dictionary, _lastRecognizedText)
+        {
+            Accepted = () => Say(_loc.Format("dict.added", _session.Dictionary?.Count ?? 0)),
+        };
+
+        _dictionaryEditor = window;
+        _session.ClipboardOutput.Suspended = true;
+
+        window.Closed += (_, _) =>
+        {
+            _dictionaryEditor = null;
+            _session.ClipboardOutput.Suspended = false;
+        };
+
+        window.Show(this);
     }
 
     /// <summary>
@@ -1140,15 +1186,62 @@ public partial class MainWindow : Window
     /// filtro que o pré-processamento usaria, para que o usuário veja o que o OCR vai
     /// receber.
     /// </summary>
-    private async Task ShowBinaryPreviewAsync()
+    /// <summary>
+    /// RF-535 / RF-536 — Abre o conta-gotas com a pré-visualização binarizada.
+    ///
+    /// A janela é ÚNICA: reabrir com ela já aberta a traz para a frente. Uma segunda
+    /// instância editaria o mesmo grupo de cor por dois caminhos, e a última a fechar
+    /// venceria sem que o usuário soubesse por quê.
+    ///
+    /// RF-535 pede também que, enquanto ela está aberta, as molduras deixem de ser "sempre
+    /// no topo". As molduras ainda não existem como janela (RF-047 a RF-056 pendentes);
+    /// quando existirem, é aqui que elas serão rebaixadas.
+    /// </summary>
+    private ColorPickerWindow? _picker;
+
+    private void OpenColorPicker()
     {
+        if (_picker is not null) { _picker.Activate(); return; }
+
         // RF-084 — sem nenhuma área, o programa INFORMA em vez de falhar.
-        var built = _session.Regions.Build();
-        if (built.Captures.Count == 0)
+        if (_session.Regions.Build().Captures.Count == 0) { Say("area.none"); return; }
+
+        var settings = _session.BuildCycleSettings().Filter;
+
+        // RF-105 — o grupo editado é o PRIMEIRO; os demais continuam valendo no filtro.
+        var group = _session.Profile.ColorGroups.Count > 0
+            ? _session.Profile.ColorGroups[0]
+            : AddFirstColorGroup();
+
+        var window = new ColorPickerWindow(_loc, group, settings, CaptureFirstArea)
         {
-            Say("area.none");
-            return;
-        }
+            Changed = () =>
+            {
+                // RF-508 — a mudança vale imediatamente, sem passar por "aplicar".
+                _session.Profile.FilterMode = settings.Mode;
+                _session.Profile.Threshold = settings.Threshold;
+                _session.Profile.Erosion = settings.Erosion;
+                LoadValues();
+            },
+        };
+
+        _picker = window;
+        window.Closed += (_, _) => _picker = null;
+        window.Show(this);
+    }
+
+    private Gort.Core.Model.ColorGroup AddFirstColorGroup()
+    {
+        var group = new Gort.Core.Model.ColorGroup();
+        _session.Profile.ColorGroups.Add(group);
+        return group;
+    }
+
+    /// <summary>Recaptura a primeira área, que é o que o conta-gotas examina.</summary>
+    private Gort.Core.Model.ImageBuffer? CaptureFirstArea()
+    {
+        var built = _session.Regions.Build();
+        if (built.Captures.Count == 0) return null;
 
         var captured = _session.Platform.Capture.Capture(new Gort.Platform.Capture.CaptureRequest
         {
@@ -1156,16 +1249,7 @@ public partial class MainWindow : Window
             Source = Gort.Platform.Capture.CaptureSource.Screen,
         });
 
-        if (captured.Count == 0) { Say("area.none"); return; }
-
-        var settings = _session.BuildCycleSettings().Filter;
-        var preview = Preprocessor.Preview(captured[0].Image, settings);
-
-        string path = Path.Combine(_session.Paths.DiagnosticsDirectory, "previsualizacao.png");
-        Gort.Platform.Diagnostics.PngWriter.Save(preview, path);
-
-        Say($"pré-visualização gravada em {path}");
-        await Task.CompletedTask;
+        return captured.Count == 0 ? null : captured[0].Image;
     }
 
     /// <summary>
@@ -1274,8 +1358,16 @@ public partial class MainWindow : Window
         return new TranslationLoop(host);
     }
 
+    /// <summary>
+    /// RF-537 — O último texto reconhecido, para pré-preencher o editor de dicionário.
+    /// Escrito na thread de interface, que é a única que desenha.
+    /// </summary>
+    private string _lastRecognizedText = "";
+
     private void DrawResult(CycleResult result)
     {
+        _lastRecognizedText = result.RecognizedText;
+
         if (_translationWindow is OverlayWindow overlay)
         {
             // RF-494 — o cálculo de tamanho e posição é uma das parcelas medidas.

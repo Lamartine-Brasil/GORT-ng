@@ -74,6 +74,8 @@ for (int i = 0; i < items.Count; i++)
 Console.WriteLine();
 Report(window, presets);
 
+RenderAuxiliaryWindows(loc, outputDir);
+
 Console.WriteLine();
 Console.WriteLine($"Arquivos em {outputDir}");
 
@@ -111,6 +113,82 @@ static void Report(AdvancedOptionsWindow window, ApiPresetStore presets)
     Console.WriteLine();
     Console.WriteLine("RF-529 — presets criados com o mesmo nome:");
     foreach (var preset in presets.Presets) Console.WriteLine($"  {preset.DisplayName}");
+}
+
+/// <summary>V.4 — As janelas auxiliares, pelo mesmo caminho.</summary>
+static void RenderAuxiliaryWindows(Localizer loc, string outputDir)
+{
+    Console.WriteLine();
+    Console.WriteLine("V.4 — janelas auxiliares:");
+
+    var dictionary = new Gort.App.Windows.DictionaryEditorWindow(
+        loc, Path.Combine(Path.GetTempPath(), "gort-dic-inexistente.txt"), null,
+        "Pressione qualquer tecla");
+    Capture(dictionary, "janela-dicionario.png", outputDir);
+
+    // Uma imagem sintética: faixas de cor com um texto escuro por cima, que é o que a
+    // binarização precisa separar.
+    var picker = new Gort.App.Windows.ColorPickerWindow(
+        loc, new Gort.Core.Model.ColorGroup { R = 240, G = 240, B = 240, S2 = 100, V2 = 100 },
+        new Gort.Core.Imaging.FilterSettings
+        {
+            Mode = Gort.Core.Imaging.FilterMode.Threshold,
+            Threshold = 128,
+        },
+        SyntheticImage);
+    Capture(picker, "janela-conta-gotas.png", outputDir, keepOpen: true);
+
+    // RF-536 — "transformar" mostra a binarização, com o mesmo critério do
+    // pré-processamento. É a razão de a janela existir: ver o que o OCR vai receber.
+    Click(picker, "TransformButton");
+    Capture(picker, "janela-conta-gotas-binarizada.png", outputDir, keepOpen: true);
+
+    // RF-536 — alterar o limiar REPROCESSA automaticamente, sem passar pelo botão.
+    picker.GetControl<Slider>("ThresholdSlider").Value = 200;
+    Capture(picker, "janela-conta-gotas-limiar-200.png", outputDir);
+}
+
+static void Click(Window window, string name)
+{
+    var button = window.GetControl<Button>(name);
+    button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+}
+
+static Gort.Core.Model.ImageBuffer SyntheticImage()
+{
+    const int W = 320, H = 120;
+    var pixels = new byte[W * H * 4];
+
+    for (int y = 0; y < H; y++)
+    {
+        for (int x = 0; x < W; x++)
+        {
+            int i = (y * W + x) * 4;
+            bool stripe = (x / 40) % 2 == 0;
+            bool ink = y is > 40 and < 80 && x % 40 is > 8 and < 26;
+
+            byte tone = ink ? (byte)30 : stripe ? (byte)220 : (byte)170;
+            pixels[i + 0] = tone;
+            pixels[i + 1] = tone;
+            pixels[i + 2] = ink ? (byte)30 : (byte)255;
+            pixels[i + 3] = 255;
+        }
+    }
+    return new Gort.Core.Model.ImageBuffer(W, H, Gort.Core.Model.PixelFormat.Bgra32, pixels);
+}
+
+static void Capture(Window window, string name, string outputDir, bool keepOpen = false)
+{
+    if (!window.IsVisible) window.Show();
+    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+    ((Control)window.Content!).UpdateLayout();
+    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+    using var frame = window.CaptureRenderedFrame();
+    frame?.Save(Path.Combine(outputDir, name));
+    Console.WriteLine($"  {window.Title}  →  {name}");
+    if (!keepOpen) window.Close();
 }
 
 static string Slug(string text)

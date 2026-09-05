@@ -1,0 +1,113 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.ColorPickerWindow"
+        Width="880" Height="620"
+        Background="#F4F4F6"
+        RequestedThemeVariant="Light"
+        WindowStartupLocation="CenterOwner">
+
+  <!-- RF-535 — conta-gotas: imagem ampliável, zoom, R/G/B/H/S/V, amostra, processar.
+       RF-536 — pré-visualização binarizada: modo, painéis por modo, limiar sincronizado. -->
+  <DockPanel Margin="14">
+
+    <TextBlock x:Name="TitleText" DockPanel.Dock="Top" FontSize="16" FontWeight="SemiBold"
+               Margin="0,0,0,8" />
+
+    <Border DockPanel.Dock="Right" Width="260" Margin="12,0,0,0">
+      <ScrollViewer>
+        <StackPanel Spacing="8">
+
+          <!-- RF-535 — leitura do pixel sob o cursor. -->
+          <TextBlock x:Name="PickerLabel" FontWeight="SemiBold" />
+          <Border x:Name="ColorSample" Height="44" BorderBrush="#909090" BorderThickness="1" />
+          <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto"
+                ColumnSpacing="6" RowSpacing="3">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="R" />
+            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="RValue" />
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="H" />
+            <TextBlock Grid.Row="0" Grid.Column="3" x:Name="HValue" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="G" />
+            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="GValue" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="S" />
+            <TextBlock Grid.Row="1" Grid.Column="3" x:Name="SValue" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="B" />
+            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="BValue" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="V" />
+            <TextBlock Grid.Row="2" Grid.Column="3" x:Name="VValue" />
+          </Grid>
+
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock x:Name="ZoomLabel" VerticalAlignment="Center" />
+            <Slider x:Name="ZoomSlider" Width="130" Minimum="1" Maximum="8"
+                    TickFrequency="1" IsSnapToTickEnabled="True" />
+            <TextBlock x:Name="ZoomValue" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <!-- RF-536 — modo do filtro, e um painel de parâmetros por modo. -->
+          <TextBlock x:Name="ModeLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+          <ComboBox x:Name="ModeBox" HorizontalAlignment="Stretch" />
+
+          <StackPanel x:Name="RgbPanel" Spacing="4">
+            <TextBlock x:Name="RgbHelp" Foreground="#606060" FontSize="12"
+                       TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <NumericUpDown x:Name="GroupR" Width="78" Minimum="0" Maximum="255"
+                             FormatString="0" />
+              <NumericUpDown x:Name="GroupG" Width="78" Minimum="0" Maximum="255"
+                             FormatString="0" />
+              <NumericUpDown x:Name="GroupB" Width="78" Minimum="0" Maximum="255"
+                             FormatString="0" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel x:Name="HsvPanel" Spacing="4">
+            <TextBlock x:Name="HsvHelp" Foreground="#606060" FontSize="12"
+                       TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock x:Name="SLabel" VerticalAlignment="Center" Width="18" />
+              <NumericUpDown x:Name="GroupS1" Width="102" Minimum="0" Maximum="100"
+                             FormatString="0" />
+              <NumericUpDown x:Name="GroupS2" Width="102" Minimum="0" Maximum="100"
+                             FormatString="0" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock x:Name="VLabel" VerticalAlignment="Center" Width="18" />
+              <NumericUpDown x:Name="GroupV1" Width="102" Minimum="0" Maximum="100"
+                             FormatString="0" />
+              <NumericUpDown x:Name="GroupV2" Width="102" Minimum="0" Maximum="100"
+                             FormatString="0" />
+            </StackPanel>
+          </StackPanel>
+
+          <!-- RF-536 — deslizante e campo numérico SINCRONIZADOS. -->
+          <StackPanel x:Name="ThresholdPanel" Spacing="4">
+            <TextBlock x:Name="ThresholdLabel" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Slider x:Name="ThresholdSlider" Width="120" Minimum="0" Maximum="255"
+                      TickFrequency="1" IsSnapToTickEnabled="True" />
+              <NumericUpDown x:Name="ThresholdBox" Width="116" Minimum="0" Maximum="255"
+                             FormatString="0" />
+            </StackPanel>
+          </StackPanel>
+
+          <CheckBox x:Name="ErosionCheck" />
+
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Button x:Name="TransformButton" Padding="14,6" />
+            <Button x:Name="RevertButton" Padding="14,6" />
+          </StackPanel>
+          <Button x:Name="ProcessButton" Padding="14,6" HorizontalAlignment="Stretch" />
+          <TextBlock x:Name="StatusText" Foreground="#606060" FontSize="12"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <Border Background="White" BorderBrush="#DDD" BorderThickness="1">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Image x:Name="Canvas" Stretch="None" HorizontalAlignment="Left"
+               VerticalAlignment="Top" Cursor="Cross" />
+      </ScrollViewer>
+    </Border>
+  </DockPanel>
+</Window>

@@ -311,3 +311,31 @@ lang.pt-BR,Português (Brasil)
 shortcut.OpenProfile,Abrir perfil
 shortcut.ToggleForcedTransparency,Alternar transparência forçada
 shortcut.SwitchTranslationService,Trocar serviço
+
+# ─── V.4 — editor de dicionário (RF-537) ─────────────────────────────────────
+dict.title,Editor de dicionário
+dict.from,Texto reconhecido
+dict.to,Correção
+dict.accept,Aceitar
+dict.cancel,Cancelar
+dict.invalid,"Informe um texto reconhecido diferente da correção."
+dict.added,"Par acrescentado. O dicionário tem {0} entradas."
+
+# ─── V.4 — conta-gotas e pré-visualização binarizada (RF-535, RF-536) ─────────
+picker.title,Conta-gotas e pré-visualização
+picker.color,Cor sob o cursor
+picker.zoom,Ampliação
+picker.mode,Modo do filtro
+picker.rgb_help,"Clique na imagem para adotar a cor do pixel. O modo RGB extrai essa cor exata, com a tolerância de calibragem."
+picker.hsv_help,"O modo HSV usa a matiz da cor adotada e as faixas de saturação e brilho abaixo."
+picker.threshold,Limiar
+picker.erosion,Erosão
+picker.transform,Transformar
+picker.revert,Reverter
+picker.process,Recapturar a área
+picker.no_area,"Nenhuma área definida para capturar."
+picker.size,"Área de {0}×{1} pixels."
+filter.none,Sem filtro
+filter.rgb,RGB
+filter.hsv,HSV
+filter.threshold,Limiar

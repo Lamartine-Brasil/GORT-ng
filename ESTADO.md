@@ -23,7 +23,7 @@ Gort.sln
 │   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
-│   └── Gort.OptionsProbe/      as sete abas de V.3, renderizadas fora da tela
+│   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
     ├── Gort.Core.Tests/        558 testes
     ├── Gort.Platform.Tests/     33 testes
@@ -34,16 +34,14 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **a janela de opções avançadas (V.3)**. 651 testes passando
-(558 + 33 + 36 + 24), as sete abas verificadas em imagem.
+Último commit: **conta-gotas, pré-visualização binarizada e editor de dicionário**.
+651 testes passando (558 + 33 + 36 + 24), as janelas verificadas em imagem.
 
-**Próximo passo — as janelas auxiliares de V.4**, na ordem de utilidade:
+**Próximo passo — o que resta de V.4:**
 
-1. **Gerenciamento de áreas (RF-533)** e **grupos de cor por área (RF-534)**.
-2. **Conta-gotas (RF-535)** e **pré-visualização binarizada (RF-536)** —
-   `Preprocessor.Preview` já existe como função.
-3. **Editor de dicionário (RF-537)** — RF-181 já carrega e aplica o dicionário.
-4. **Gerenciamento de chaves (RF-538)**, **sobre (RF-543)** e **doação (RF-544)**.
+1. **Gerenciamento de áreas (RF-533)** e **grupos de cor por área (RF-534)**. Dependem do
+   desenho das molduras (RF-047 a RF-056), que também está pendente — é o mesmo trabalho.
+2. **Gerenciamento de chaves de tradução (RF-538)** e **sobre (RF-543)**.
 
 Dependem de coisas que não existem aqui: RF-539 (OCR de nuvem), RF-540 (instalador do motor
 por ambiente interpretado), RF-541 (servidor da comunidade) e RF-542 (navegador embutido).
@@ -76,7 +74,8 @@ credenciais e de um servidor de distribuição.
 | **— Cache e fontes locais** | RF-206 a RF-224, RF-241 a RF-243 | **Completa.** |
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
-| **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. Faltam as janelas auxiliares de V.4. |
+| **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
+| **17c — Auxiliares de V.4** | RF-535, RF-536, RF-537 | **Conta-gotas com pré-visualização binarizada e editor de dicionário**, os dois verificados em imagem. Faltam RF-533, RF-534, RF-538, RF-543. |
 
 Também prontos, transversais a tudo:
 
@@ -414,6 +413,25 @@ Foi ela que achou duas faltas de verdade: as chaves `shortcut.OpenProfile`,
 tabela — a aba mostrava os nomes das chaves —, e os nomes dos motores, serviços e idiomas do
 catálogo também não. Ambas viraram testes.
 
+## As janelas auxiliares de V.4
+
+- **Conta-gotas e pré-visualização binarizada, na mesma janela** (RF-535, RF-536). As duas
+  são o mesmo trabalho visto de dois lados: o conta-gotas diz QUAL cor o texto tem, e a
+  pré-visualização mostra o que o filtro faz com essa escolha. Em duas janelas, cada ajuste
+  exigiria alternar entre elas. Clicar na imagem ADOTA a cor do pixel — ler o valor e
+  digitá-lo à mão em três campos transformaria uma escolha visual em transcrição. A imagem
+  amplia por REPETIÇÃO de pixel, não por interpolação: quem escolhe a cor de um pixel
+  precisa ver aquele pixel, não uma média dele com os vizinhos.
+- **Editor de dicionário** (RF-537). O texto reconhecido atual vem pré-preenchido — é o
+  ponto do recurso: o usuário abre o editor no instante em que viu o OCR errar, e o texto
+  errado já está lá. Enquanto ele está aberto, a cópia automática para a área de
+  transferência fica suspensa.
+
+Verificados por `tools/Gort.OptionsProbe`, que além de gravar as janelas exercita a
+binarização: com limiar 128 só as barras escuras passam; movendo o deslizante para 200 a
+imagem é reprocessada SEM passar pelo botão, como RF-536 exige, e as faixas intermediárias
+passam a entrar.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -547,6 +565,12 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     painel isolado devolve uma imagem em branco — foi o que a primeira versão da sonda
     produziu. A plataforma "headless" com Skia dá o que falta: uma janela de verdade, sem
     tela, cujo quadro se captura com `CaptureRenderedFrame`.
+
+24. **O que RF-535 pede e ainda não tem onde acontecer.** O requisito diz que, enquanto o
+    conta-gotas está aberto, as molduras deixam de ser "sempre no topo". As molduras ainda
+    não existem como janela — RF-047 a RF-056 seguem pendentes —, então não há o que
+    rebaixar. O lugar onde isso vai acontecer está marcado no código, junto da regra de
+    instância única, que essa sim já vale.
 
 ## Como rodar os testes
 
