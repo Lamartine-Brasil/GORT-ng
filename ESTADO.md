@@ -606,6 +606,33 @@ build/macos/empacotar.sh x64          # para Intel
 build/macos/empacotar.sh arm64 . --dependente   # sem o runtime dentro
 ```
 
+## A sobreposição alimentada por um ciclo real
+
+`tools/Gort.LayerProbe -- <pasta> --real X Y L A` captura a tela de verdade, reconhece,
+traduz, analisa a cor da própria imagem e desenha a sobreposição fora da tela. Tudo o mais
+na sonda usa cenas sintéticas — blocos escritos à mão para exercitar o desenho. Este modo é
+a única forma de ver os capítulos 19 e 20 se encontrando sobre dados que ninguém escolheu.
+
+Verificado com um diálogo de jogo real:
+
+```
+  ciclo: 663 ms · 3 blocos
+     bloco  fonte 12,5 pt (preferido 12,5) · cor auto #FFE7DAA0
+             "O Velho Guardião"
+     bloco  fonte 12,5 pt (preferido 12,5) · cor auto #FFDCE6F0
+             "O portão está selado há cem anos."
+     bloco  fonte 12,5 pt (preferido 12,5) · cor auto #FFDCE6F0
+             "Somente aquele que carrega o sigilo quebrado pode passar."
+     layout 1,4 ms · desenho 3,3 ms
+```
+
+**A análise de cor do capítulo 20 acertou as cores da imagem.** O corpo do diálogo era
+`#dce6f0` no original e saiu `#DCE6F0` — exato. O título era `#e8d9a0` e saiu `#E7DAA0`,
+um passo de diferença em cada canal. O fundo escuro da caixa também foi extraído.
+
+E o tamanho de fonte de RF-360 🔒 saiu igual ao preferido nos três blocos: nenhum precisou
+de bissecção, o que é o esperado quando a tradução cabe no espaço do original.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -826,6 +853,12 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     contando TEXTOS, não requisições — a requisição é uma só, como RF-231 manda. O número
     fazia parecer que havia uma violação onde não havia. Renomeado para `NetworkTexts`, e o
     rótulo da sonda agora cita o requisito.
+
+37. **`await` trava numa sonda do Avalonia.** A primeira versão do modo `--real` ficou
+    pendurada sem imprimir nada: configurar o Avalonia instala um contexto de sincronização,
+    e aguardar nele a partir do fluxo principal trava. O ciclo passou a ser aguardado por
+    `Task.Run(...).GetAwaiter().GetResult()`, que é a mesma razão pela qual RF-009 manda o
+    laço de tradução sondar em vez de usar `await`.
 
 ## Como rodar os testes
 

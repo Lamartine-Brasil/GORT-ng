@@ -178,3 +178,142 @@ RenderOverlay("06-sobreposicao-cor-automatica", _ => { }, () => Cena()
             UsedFallback: false, ContrastCorrected: false),
     })
     .ToList());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A SOBREPOSIÇÃO ALIMENTADA POR UM CICLO REAL.
+//
+// Tudo acima usa cenas sintéticas: blocos escritos à mão, com retângulos e cores
+// escolhidos para exercitar o desenho. Isto aqui é diferente — captura a tela de
+// verdade, reconhece, traduz, analisa a cor da própria imagem e desenha. É a única
+// forma de ver os capítulos 19 e 20 se encontrando: o tamanho de fonte derivado do
+// original (RF-360 🔒), a resolução de colisões (RF-355 🔒) e as cores extraídas da
+// imagem (cap. 20 🔒), todos sobre dados que ninguém escolheu.
+//
+// Uso:  dotnet run --project tools/Gort.LayerProbe -- <pasta> --real X Y L A
+// ─────────────────────────────────────────────────────────────────────────────
+if (args.Contains("--real"))
+{
+    // Sem `await`: o Avalonia instala um contexto de sincronização ao ser configurado, e
+    // aguardar nele a partir do fluxo principal trava — a primeira versão desta sonda ficou
+    // pendurada sem imprimir nada.
+    RenderFromRealCycle();
+}
+
+void RenderFromRealCycle()
+{
+    var numeros = args.SkipWhile(a => a != "--real").Skip(1)
+                      .Where(a => int.TryParse(a, out _)).Select(int.Parse).ToArray();
+
+    using var sessao = AppSession.Create();
+    sessao.ApplyConfiguration();
+
+    var monitores = sessao.Platform.Monitors.Monitors;
+    var area = Gort.Platform.Monitors.MonitorGeometry.VirtualDesktop(monitores);
+
+    var moldura = numeros.Length >= 4
+        ? new Gort.Core.Model.Rect(numeros[0], numeros[1], numeros[2], numeros[3])
+        : new Gort.Core.Model.Rect(area.X, area.Y, area.Width, area.Height / 2);
+
+    sessao.Regions.AddArea(moldura);
+
+    // RF-098 — a imagem original só é pedida no modo sobreposição com cor automática; é
+    // ela que a análise do capítulo 20 lê.
+    sessao.Profile.WindowMode = Gort.Core.Structuring.WindowMode.Overlay;
+    sessao.Advanced.AutoColor = true;
+
+    var ajustes = sessao.BuildCycleSettings();
+    var construidas = sessao.Regions.Build();
+
+    Console.WriteLine();
+    Console.WriteLine("Sobreposição a partir de um ciclo REAL");
+    Console.WriteLine(new string('─', 78));
+    Console.WriteLine($"  área: {construidas.Captures[0]}   ampliação: {sessao.Profile.Scale}x");
+
+    var relogio = System.Diagnostics.Stopwatch.StartNew();
+    var resultado = Task.Run(() => sessao.Cycle.RunAsync(construidas, ajustes))
+                        .GetAwaiter().GetResult();
+    relogio.Stop();
+
+    if (resultado.Regions.Count == 0)
+    {
+        Console.WriteLine("  a captura não produziu imagem.");
+        return;
+    }
+
+    Console.WriteLine($"  ciclo: {relogio.ElapsedMilliseconds} ms · "
+                      + $"{resultado.Regions.Sum(r => r.Blocks.Count)} blocos");
+
+    // A conversão de bloco de região em bloco de sobreposição é a mesma que a janela
+    // principal faz (RF-352 a RF-354); aqui a janela é o próprio retângulo da área.
+    var janela = construidas.Captures[0];
+    var blocos = new List<OverlayBlock>();
+
+    foreach (var regiao in resultado.Regions)
+    {
+        var metrics = Gort.Core.Regions.FrameGeometry.MetricsFor(
+            Gort.Platform.Monitors.MonitorGeometry.ScaleOf(monitores, regiao.ScreenRect));
+
+        for (int i = 0; i < regiao.Blocks.Count; i++)
+        {
+            var bloco = regiao.Blocks[i];
+            if (string.IsNullOrWhiteSpace(bloco.TranslatedText)) continue;
+
+            var rect = Gort.Core.Rendering.OverlayGeometry.BlockRect(
+                bloco.SourceBox, regiao.ScreenRect, sessao.Profile.Scale, janela, metrics.Border);
+
+            var areaNaJanela = regiao.ScreenRect.Offset(-janela.X, -janela.Y);
+            rect = Gort.Core.Rendering.OverlayGeometry.ClipToArea(rect, areaNaJanela);
+            if (rect.IsEmpty) continue;
+
+            blocos.Add(new OverlayBlock
+            {
+                Text = bloco.TranslatedText!,
+                ViewRect = rect,
+                SourceRect = bloco.SourceBox,
+                IsTitle = bloco.IsTitle,
+                Orientation = bloco.Orientation,
+                OwnMedianSize = Gort.Core.Rendering.OverlayTextLayout.MedianLineSize(
+                    bloco.Lines, bloco.Orientation),
+                AutoColor = regiao.UsesAutoColor && i < regiao.AutoColors.Count
+                    ? regiao.AutoColors[i] : null,
+            });
+        }
+    }
+
+    var superficie = new OverlaySurface
+    {
+        Width = janela.Width,
+        Height = janela.Height,
+        Translating = true,
+        FontStroke = true,
+        AutoFontSize = true,
+        Scale = sessao.Profile.Scale,
+        VerticalDpi = monitores.FirstOrDefault(m => m.IsPrimary)?.Dpi ?? P.ReferenceDpi,
+        FontFamilyName = "",
+    };
+
+    superficie.SetBlocks(blocos);
+    superficie.Measure(new Size(janela.Width, janela.Height));
+    superficie.Arrange(new Rect(0, 0, janela.Width, janela.Height));
+
+    var mapa = new RenderTargetBitmap(
+        new PixelSize(janela.Width, janela.Height), new Vector(96, 96));
+    mapa.Render(superficie);
+
+    string arquivo = Path.Combine(outputDir, "07-sobreposicao-real.png");
+    mapa.Save(arquivo);
+
+    foreach (var b in superficie.Blocks)
+    {
+        Console.WriteLine($"     {(b.IsTitle ? "título " : "bloco  ")}fonte "
+                          + $"{b.FinalFontSize:0.0} pt (preferido {b.PreferredFontSize:0.0}) · "
+                          + $"{b.Lines.Count} linha(s)"
+                          + $"{(b.Clipped ? " · RECORTADO" : "")}"
+                          + $"{(b.AutoColor is null ? "" : $" · cor auto {b.AutoColor.Font}")}");
+        Console.WriteLine($"             \"{b.Text}\"");
+    }
+
+    Console.WriteLine($"     layout {superficie.LastLayoutMs:0.0} ms · "
+                      + $"desenho {superficie.LastDrawMs:0.0} ms");
+    Console.WriteLine($"  → {arquivo}");
+}
