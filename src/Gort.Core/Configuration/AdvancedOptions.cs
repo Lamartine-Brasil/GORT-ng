@@ -180,6 +180,21 @@ public sealed class AdvancedOptions
 
     public static AdvancedOptions Defaults() => new();
 
+    /// <summary>
+    /// RF-530 / RF-532 — Restaura os padrões.
+    ///
+    /// A direção do texto é DERIVADA da propriedade de direção do idioma de destino
+    /// (RF-311), e não de uma lista de idiomas embutida — RF-567 proíbe o programa de
+    /// comparar com identificadores de idioma. Acrescentar um idioma da direita para a
+    /// esquerda passa a ser acrescentar uma linha em `data/languages.toml`.
+    /// </summary>
+    public static AdvancedOptions Defaults(Catalog.LanguageInfo? targetLanguage)
+    {
+        var options = new AdvancedOptions();
+        if (targetLanguage is not null) options.RightToLeft = targetLanguage.RightToLeft;
+        return options;
+    }
+
     public static AdvancedOptions Load(string path, out TomlStore store)
     {
         store = TomlStore.Load(path);

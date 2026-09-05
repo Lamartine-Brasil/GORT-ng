@@ -127,34 +127,95 @@ public partial class LayerTranslationWindow : Window, ITranslationWindow
         Surface.InvalidateVisual();
     }
 
+    // ── V.5 — menu de contexto (RF-545, RF-546) ─────────────────────────────
+
+    /// <summary>
+    /// RF-546 — De onde o menu lê o estado de "remover espaços", e para onde ele o devolve.
+    ///
+    /// A opção não é da janela: ela muda o TRATAMENTO TEXTUAL do ciclo (RF-186). A janela
+    /// não guarda uma cópia — ela pergunta e avisa —, senão o menu passaria a discordar da
+    /// aba de texto assim que qualquer um dos dois mudasse.
+    /// </summary>
+    public Func<bool>? ReadRemoveSpaces { get; set; }
+    public Action<bool>? RemoveSpacesChanged { get; set; }
+
+    /// <summary>Textos do menu, vindos da tabela de localização (RF-481).</summary>
+    public Func<string, string>? Text { get; set; }
+
+    private MenuItem? _orderDefault, _orderCenter, _removeSpaces, _forcedTransparency;
+
     /// <summary>
     /// V.5 / RF-545 — Menu de contexto: ordenação, remover espaços, transparência forçada,
-    /// fechar. RF-546 — as marcações refletem o estado e valem imediatamente, sem "aplicar".
+    /// fechar.
+    ///
+    /// RF-546 — as marcações refletem o estado ATUAL e as alterações valem imediatamente,
+    /// sem exigir "aplicar". As duas exigências andam juntas: como o efeito é imediato, o
+    /// estado tem de ser relido toda vez que o menu abre — outra parte do programa pode
+    /// ter mudado a mesma opção desde a última abertura.
     /// </summary>
     private void BuildContextMenu()
     {
-        var alignLeft = new MenuItem { Header = "Ordenação: padrão" };
-        var alignCenter = new MenuItem { Header = "Ordenação: centralizado" };
-        var forced = new MenuItem { Header = "Transparência forçada" };
-        var close = new MenuItem { Header = "Fechar" };
+        _orderDefault = new MenuItem { ToggleType = MenuItemToggleType.Radio, GroupName = "ordem" };
+        _orderCenter = new MenuItem { ToggleType = MenuItemToggleType.Radio, GroupName = "ordem" };
+        _removeSpaces = new MenuItem { ToggleType = MenuItemToggleType.CheckBox };
+        _forcedTransparency = new MenuItem { ToggleType = MenuItemToggleType.CheckBox };
+        var close = new MenuItem();
 
-        alignLeft.Click += (_, _) =>
-        {
-            Surface.TextHorizontalAlignment = TextAlignment.Left;
-            Surface.InvalidateVisual();
-        };
-        alignCenter.Click += (_, _) =>
-        {
-            Surface.TextHorizontalAlignment = TextAlignment.Center;
-            Surface.InvalidateVisual();
-        };
-        forced.Click += (_, _) => ForcedTransparency = !ForcedTransparency;
+        _orderDefault.Click += (_, _) => SetAlignment(TextAlignment.Left);
+        _orderCenter.Click += (_, _) => SetAlignment(TextAlignment.Center);
+
+        _removeSpaces.Click += (_, _) =>
+            RemoveSpacesChanged?.Invoke(_removeSpaces.IsChecked);
+
+        _forcedTransparency.Click += (_, _) =>
+            ForcedTransparency = _forcedTransparency.IsChecked;
+
         close.Click += (_, _) => Hide();
 
-        ContextMenu = new ContextMenu
+        var menu = new ContextMenu
         {
-            ItemsSource = new[] { alignLeft, alignCenter, forced, close },
+            ItemsSource = new[]
+            {
+                _orderDefault, _orderCenter, _removeSpaces, _forcedTransparency, close,
+            },
         };
+
+        // RF-546 — o estado é relido a cada abertura, nunca guardado em cópia.
+        menu.Opening += (_, _) => RefreshContextMenu();
+
+        ContextMenu = menu;
+        ApplyMenuText(close);
+    }
+
+    private void ApplyMenuText(MenuItem close)
+    {
+        string Localized(string key) => Text?.Invoke(key) ?? key;
+
+        _orderDefault!.Header = Localized("layer.menu.order_default");
+        _orderCenter!.Header = Localized("layer.menu.order_center");
+        _removeSpaces!.Header = Localized("layer.menu.remove_spaces");
+        _forcedTransparency!.Header = Localized("layer.menu.forced_transparency");
+        close.Header = Localized("layer.menu.close");
+    }
+
+    /// <summary>RF-546 — As marcações refletem o estado atual.</summary>
+    private void RefreshContextMenu()
+    {
+        if (_orderDefault is null) return;
+
+        bool centered = Surface.TextHorizontalAlignment == TextAlignment.Center;
+        _orderDefault.IsChecked = !centered;
+        _orderCenter.IsChecked = centered;
+
+        _removeSpaces!.IsChecked = ReadRemoveSpaces?.Invoke() ?? false;
+        _forcedTransparency!.IsChecked = ForcedTransparency;
+    }
+
+    /// <summary>RF-545 — A alteração vale imediatamente: a janela repinta na hora.</summary>
+    private void SetAlignment(TextAlignment alignment)
+    {
+        Surface.TextHorizontalAlignment = alignment;
+        Surface.InvalidateVisual();
     }
 
     protected override void OnClosing(WindowClosingEventArgs e)

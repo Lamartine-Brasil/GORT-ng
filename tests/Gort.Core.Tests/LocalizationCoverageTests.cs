@@ -23,8 +23,12 @@ public class LocalizationCoverageTests
         string appDirectory = Path.Combine(TestPaths.RepositoryRoot, "src", "Gort.App");
         if (!Directory.Exists(appDirectory)) yield break;
 
+        // `Localized("...")` é o atalho das janelas que recebem a tabela por delegação, em
+        // vez de guardar o localizador — o menu de contexto do modo camada, por exemplo.
+        // Sem ele a varredura passaria por cima de chaves de verdade.
         var pattern = new Regex(
-            @"_loc(?:\[""(?<k>[^""]+)""\]|\.(?:Get|Format|Has)\(""(?<k>[^""]+)"")",
+            @"(?:_loc(?:\[""(?<k>[^""]+)""\]|\.(?:Get|Format|Has)\(""(?<k>[^""]+)"")"
+            + @"|Localized\(""(?<k>[^""]+)"")",
             RegexOptions.Compiled);
 
         foreach (var file in Directory.EnumerateFiles(appDirectory, "*.cs", SearchOption.AllDirectories))

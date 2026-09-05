@@ -171,3 +171,16 @@ debug.counters,"OCR: {0} · traduções: {1} · rede: {2} · erros: {3}"
 msg.memory_cleared,Memória de resultados apagada.
 msg.memory_busy,"Há uma gravação em curso; tente de novo em instantes."
 msg.analysis_saved,"Retrato de análise gravado: {0}"
+
+# ─── V.3 — opções avançadas: rótulos dos controles deslizantes (RF-526) ──────
+llm.thinking.0,Desligado
+llm.thinking.1,Mínimo
+llm.thinking.2,Médio
+llm.thinking.3,Alto
+
+# ─── V.5 — menu de contexto do modo camada (RF-545) ──────────────────────────
+layer.menu.order_default,Ordenação: padrão
+layer.menu.order_center,Ordenação: centralizado
+layer.menu.remove_spaces,Remover espaços
+layer.menu.forced_transparency,Transparência forçada
+layer.menu.close,Fechar

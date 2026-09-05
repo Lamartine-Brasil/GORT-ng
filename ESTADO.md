@@ -24,7 +24,7 @@ Gort.sln
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 │   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        530 testes
+    ├── Gort.Core.Tests/        551 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -33,17 +33,25 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **Etapa 18 ligada ao ciclo**. 623 testes passando (530 + 33 + 36 + 24),
-tudo compilando, aplicação verificada subindo com a aba de depuração no ar.
+Último commit: **Etapa 17b, primeira leva**. 644 testes passando (551 + 33 + 36 + 24).
 
-**Próximo passo:** escolher entre a **Etapa 17b** (janelas auxiliares de V.3 e V.4 —
-opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas e de chaves) e
-a **Etapa 19** (endurecimento, RF-552 a RF-567, e toda a PARTE VIII). A 17b é mais
-visível; a 19 é a que fecha a especificação.
+**Próximo passo — o que falta da Etapa 17b**, na ordem de utilidade:
 
-Fora da ordem de construção, dependem de coisas de fora: a **Etapa 15** (nove serviços de
-tradução, credenciais) e a **atualização automática** de RF-416 a RF-435 (servidor de
-distribuição).
+1. **Janela de opções avançadas (V.3)** — as abas que RF-523 a RF-532 descrevem. A LÓGICA
+   toda já está pronta e testada (dependências, presets, rótulos, restauração); falta a
+   janela que a apresenta.
+2. **Gerenciamento de áreas (RF-533)** e **grupos de cor por área (RF-534)**.
+3. **Conta-gotas (RF-535)** e **pré-visualização binarizada (RF-536)** — `Preprocessor.Preview`
+   já existe como função.
+4. **Editor de dicionário (RF-537)** — RF-181 já carrega e aplica o dicionário.
+5. **Gerenciamento de chaves (RF-538)**, **sobre (RF-543)** e **doação (RF-544)**.
+
+Dependem de coisas que não existem aqui: RF-539 (OCR de nuvem), RF-540 (instalador do motor
+por ambiente interpretado), RF-541 (servidor da comunidade) e RF-542 (navegador embutido).
+
+Depois disso, a **Etapa 19** — endurecimento, RF-552 a RF-567, e toda a PARTE VIII. A
+**Etapa 15** (nove serviços de tradução) e a atualização automática de RF-416 a RF-435
+dependem de credenciais e de um servidor de distribuição.
 
 ## Etapas concluídas
 
@@ -69,6 +77,7 @@ distribuição).
 | **— Cache e fontes locais** | RF-206 a RF-224, RF-241 a RF-243 | **Completa.** |
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
+| **17b — Opções avançadas: a lógica** | RF-302 a RF-307, RF-523 a RF-532, RF-545, RF-546 | **A lógica está completa e testada**, e o menu de contexto do modo camada, no ar. Falta a janela de V.3 e as auxiliares de V.4. |
 
 Também prontos, transversais a tudo:
 
@@ -371,6 +380,28 @@ Os sinalizadores de `DebugOptions` chegam ao ciclo por `CycleSettings.Diagnostic
 restaura o comportamento normal sem reiniciar" é cumprido literalmente: nada precisa ser
 desfeito porque nada foi ligado.
 
+## Opções avançadas e presets de API
+
+A janela de V.3 ainda não existe, mas as regras que ela precisa cumprir já existem, testadas
+fora dela — é onde moram as decisões difíceis do capítulo:
+
+- `Translation/Presets/ApiPresetStore.cs` — RF-302 a RF-307. Duas fontes de presets: a lista
+  editável da interface e arquivos individuais numa pasta dedicada. **O arquivo vence a
+  entrada de mesmo nome da lista**, e o motivo é prático: um arquivo é o que se troca com
+  outra pessoa, e quem o recebeu não deve descobrir que a sua própria lista o estava
+  sombreando em silêncio. Presets de arquivo não são renomeados nem removidos pela
+  interface e voltam para o seu arquivo ao salvar; duplicados dentro do mesmo conjunto são
+  ignorados **com registro**, nunca em silêncio.
+- `Configuration/AdvancedLabels.cs` — RF-526. Os três controles guardam inteiros e nenhum
+  se apresenta como o inteiro que guarda. O nível de raciocínio vira uma **chave** derivada
+  do número, e não um caso num `switch`: acrescentar um nível é acrescentar uma linha na
+  tabela de localização.
+- `AdvancedOptions.Defaults(idioma)` — RF-532. Restaurar padrões deriva a direção do texto
+  da **propriedade** do idioma de destino, nunca de uma lista embutida (RF-311, RF-567).
+- `LayerTranslationWindow` — RF-545 e RF-546. O menu relê o estado a cada abertura em vez
+  de guardar cópia: como o efeito é imediato, outra parte do programa pode ter mudado a
+  mesma opção desde a última vez que ele abriu.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -479,6 +510,13 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     documento dizia. Ele é a caixa *mostrar texto reconhecido* da aba básica, ligada desde a
     Etapa 7. O botão que abre a pasta dos retratos existe, mas por conveniência, não por
     requisito.
+
+20. **Um leitor tolerante precisa de um aviso explícito.** RF-024 manda o leitor de TOML
+    devolver padrões em vez de lançar quando o arquivo está corrompido. Na pasta de presets
+    isso criava um preset de nome válido e URL vazia, que só falharia na hora de traduzir —
+    o teste do arquivo ilegível pegou isso. O carregador agora usa a forma que informa se
+    houve recuperação, e transforma o arquivo ilegível num aviso. A tolerância continua
+    onde ela serve: um arquivo ruim não impede os outros.
 
 ## Como rodar os testes
 

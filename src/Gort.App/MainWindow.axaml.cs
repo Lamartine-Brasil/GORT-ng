@@ -1331,6 +1331,18 @@ public partial class MainWindow : Window
         var window = new LayerTranslationWindow(_session.Platform.WindowEffects)
         {
             ShowRecognizedText = _session.Profile.ShowRecognizedText,
+
+            // RF-481 — o menu de contexto tira o texto da tabela, como o resto da interface.
+            Text = key => _loc[key],
+
+            // RF-546 — o menu LÊ o estado do perfil e o DEVOLVE para lá; ele não guarda
+            // cópia, senão discordaria da aba de texto assim que uma das duas mudasse.
+            ReadRemoveSpaces = () => _session.Profile.RemoveSpaces,
+            RemoveSpacesChanged = value =>
+            {
+                _session.Profile.RemoveSpaces = value;
+                RemoveSpacesCheck.IsChecked = value;
+            },
         };
 
         // RF-041 / RF-340 — a posição salva é validada contra os monitores presentes.
