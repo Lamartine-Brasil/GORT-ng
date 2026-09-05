@@ -309,12 +309,12 @@ public class DiagnosticCountersTests
 
         counters.RecordOcr();
         counters.RecordOcr();
-        counters.RecordTranslation(networkCalls: 3);
+        counters.RecordTranslation(networkTexts: 3);
         counters.RecordError("falhou");
 
         Assert.Equal(2, counters.OcrAttempts);
         Assert.Equal(1, counters.Translations);
-        Assert.Equal(3, counters.NetworkCalls);
+        Assert.Equal(3, counters.NetworkTexts);
         Assert.Equal(1, counters.Errors);
         Assert.Contains(counters.Messages, m => m.Contains("falhou"));
     }

@@ -54,17 +54,22 @@ public sealed class DiagnosticCounters
 
     public int OcrAttempts { get; private set; }
     public int Translations { get; private set; }
-    public int NetworkCalls { get; private set; }
+    /// <summary>
+    /// RF-231 — Textos ENVIADOS à rede, não requisições: os textos de um ciclo vão todos
+    /// numa requisição só. Chamar isto de "chamadas" faria o número parecer denunciar uma
+    /// violação de RF-231 que não existe.
+    /// </summary>
+    public int NetworkTexts { get; private set; }
     public int Errors { get; private set; }
 
     public void RecordOcr() { lock (_gate) OcrAttempts++; }
 
-    public void RecordTranslation(int networkCalls)
+    public void RecordTranslation(int networkTexts)
     {
         lock (_gate)
         {
             Translations++;
-            NetworkCalls += networkCalls;
+            NetworkTexts += networkTexts;
         }
     }
 
@@ -94,13 +99,13 @@ public sealed class DiagnosticCounters
     {
         lock (_gate)
         {
-            OcrAttempts = Translations = NetworkCalls = Errors = 0;
+            OcrAttempts = Translations = NetworkTexts = Errors = 0;
             _messages.Clear();
         }
     }
 
     public override string ToString()
-        => $"OCR: {OcrAttempts} · traduções: {Translations} · rede: {NetworkCalls} · erros: {Errors}";
+        => $"OCR: {OcrAttempts} · traduções: {Translations} · textos à rede: {NetworkTexts} · erros: {Errors}";
 }
 
 /// <summary>

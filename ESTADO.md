@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **a medição do reconhecimento em lote** — um resultado negativo, registrado
-com os números. 750 testes passando (643 + 39 + 40 + 28).
+Último commit: **verificação de ponta a ponta do build atual**, com um diálogo de jogo real
+— 240 ms, 80% do orçamento de P-05. 750 testes passando (643 + 39 + 40 + 28).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -140,8 +140,28 @@ do cache*. Medido de ponta a ponta com o ciclo real, numa caixa de diálogo de d
 | Situação | Tempo | Orçamento |
 |---|---|---|
 | Caixa de diálogo, 2 linhas, **tradução em cache** | **99 ms** | **33% de P-05** ✓ |
+| Diálogo de jogo, 800×184, 3 linhas / 3 blocos, em cache | **240 ms** | **80% de P-05** ✓ |
 | A mesma caixa, primeira vez (com rede) | 664 ms | dominado pela rede — RF-548 |
 | Tela inteira de IDE, 51 linhas, 29 blocos, em cache | 1054 ms | estoura |
+
+A segunda linha é a verificação mais recente, refeita depois de todo o trabalho das etapas
+17 a 19 — diagnóstico ligado ao ciclo, imagens de região soltas por região, tudo. É uma
+caixa de diálogo de jogo de verdade, com título e duas falas, a 2× de ampliação:
+
+```
+Texto reconhecido:
+   The Old Keeper The gate has been sealed for a hundred years.
+   Only the one who carries the broken sigil may pass.
+
+O que a janela de tradução recebe:
+   O Velho Guardião
+   O portão está selado há cem anos.
+   Somente aquele que carrega o sigilo quebrado pode passar.
+```
+
+Uma execução intermediária dessa mesma verificação pegou a página ainda carregando e leu um
+bloco só, retraduzindo no ciclo seguinte. É o comportamento que a PARTE VIII EXIGE para
+"OCR devolve lixo instável" — visto acontecendo, e não só testado.
 
 O alvo do produto é a caixa de diálogo, e é para ela que a área de OCR existe. A tela
 inteira estoura porque o custo cresce com o número de linhas.
@@ -800,6 +820,12 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     resultava em texto vazio ganhando um caractere inventado ao ser esticada ao triplo com
     zeros. O limite de 1,5× na variação de largura dentro de um grupo é correção, não
     economia — sem ele o lote não é a mesma operação mais rápida, é outra operação.
+
+36. **"Idas à rede" era rótulo errado.** A sonda do ciclo dizia "3 idas à rede" para três
+    blocos, e o contador da aba de depuração se chamava `NetworkCalls`. Os dois estavam
+    contando TEXTOS, não requisições — a requisição é uma só, como RF-231 manda. O número
+    fazia parecer que havia uma violação onde não havia. Renomeado para `NetworkTexts`, e o
+    rótulo da sonda agora cita o requisito.
 
 ## Como rodar os testes
 

@@ -155,7 +155,7 @@ for (int rodada = 1; rodada <= 2; rodada++)
     Console.WriteLine($"Ciclo {rodada}: {t.ElapsedMilliseconds} ms " +
                       $"({t.ElapsedMilliseconds * 100.0 / P.CycleIntervalSpeed1Ms:0}% de P-05), " +
                       $"{r.Regions.Sum(x => x.Blocks.Count)} blocos, " +
-                      $"{r.NetworkCount} idas à rede" +
+                      $"{r.NetworkCount} textos numa requisição (RF-231)" +
                       $"{(r.Error is null ? "" : "  ERRO: " + r.Error)}");
 
     if (rodada == 1)

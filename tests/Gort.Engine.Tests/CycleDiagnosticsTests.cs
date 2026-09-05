@@ -76,7 +76,7 @@ public class CycleDiagnosticsTests
         await BuildCycle().RunAsync(Areas(), Settings(diagnostics));
 
         Assert.Equal(1, counters.Translations);
-        Assert.True(counters.NetworkCalls > 0);
+        Assert.True(counters.NetworkTexts > 0);
     }
 
     /// <summary>

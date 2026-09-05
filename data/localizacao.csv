@@ -167,7 +167,7 @@ debug.native_save_capture,Salvar captura
 debug.native_save_result,Salvar resultado da captura
 debug.clear_memory,Limpar memória de resultados
 debug.open_folder,Abrir pasta de diagnóstico
-debug.counters,"OCR: {0} · traduções: {1} · rede: {2} · erros: {3}"
+debug.counters,"OCR: {0} · traduções: {1} · textos à rede: {2} · erros: {3}"
 msg.memory_cleared,Memória de resultados apagada.
 msg.memory_busy,"Há uma gravação em curso; tente de novo em instantes."
 msg.analysis_saved,"Retrato de análise gravado: {0}"

@@ -476,7 +476,7 @@ public partial class MainWindow : Window
     {
         DebugCounters.Text = _loc.Format("debug.counters",
             _session.Counters.OcrAttempts, _session.Counters.Translations,
-            _session.Counters.NetworkCalls, _session.Counters.Errors);
+            _session.Counters.NetworkTexts, _session.Counters.Errors);
 
         // RF-498 — o registro é acessível; as mais recentes ficam embaixo, como num log.
         DebugLog.Text = string.Join('\n', _session.Counters.Messages);
