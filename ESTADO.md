@@ -23,8 +23,8 @@ Gort.sln
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 │   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        444 testes
-    ├── Gort.Platform.Tests/     27 testes
+    ├── Gort.Core.Tests/        467 testes
+    ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
@@ -44,6 +44,7 @@ Gort.sln
 | **11 — Modo camada** | RF-007, RF-332 a RF-343, RF-387 a RF-391 | **Completa e verificada** por renderização fora da tela: contorno duplo, fundo do texto, transparência e borda de destaque. |
 | **12 — Modo sobreposição, layout 🔒** | RF-344 a RF-386, RF-392 | **Completa e verificada.** Colisões, tamanho automático de fonte, quebra por caractere e desenho sobre o texto original. |
 | **13 — Análise automática de cor 🔒** | RF-098, RF-099, RF-393 a RF-415 | **Ligada ao ciclo.** A análise construída na primeira leva entrou em uso no passo 14 do fluxo. |
+| **14 — Demais motores de OCR** | RF-122 a RF-140, RF-147 a RF-151 | **Regras completas** e o motor do sistema (C20) funcionando no macOS. Os motores clássico, de nuvem e por ambiente interpretado dependem de SDKs e credenciais que não há como exercitar aqui. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -82,7 +83,7 @@ sistema operacional (RF-577).
 
 | Sistema | C1 captura | C18 monitores | Situação |
 |---|---|---|---|
-| **macOS** | CoreGraphics | CoreGraphics | **Verificada nesta máquina.** Conteúdo, orientação, cores e dimensões conferidos contra a tela real. |
+| **macOS** | CoreGraphics | CoreGraphics | **Verificada nesta máquina.** Conteúdo, orientação, cores e dimensões conferidos contra a tela real. C7 e C20 também. |
 | **Windows** | GDI (`BitBlt` + `CreateDIBSection`) | `EnumDisplayMonitors` + `GetDpiForMonitor` | Compila; **não executada aqui** — falta uma máquina Windows. |
 | **Linux/X11** | `XGetImage` | Xinerama | Compila; **não executada aqui**. Sob Wayland a sessão é detectada e C1/C5/C10/C12 são reportadas indisponíveis com a explicação de RF-568. |
 
@@ -262,6 +263,25 @@ RF-357 exige, e o que impede o nome do personagem de virar texto ilegível.
 A quebra sai **no meio da palavra** ("Precisamos s / air agora"). Isso é o comportamento
 exigido, não um defeito: RF-369 quebra por caractere, e a PARTE XI item 15 proíbe
 explicitamente hifenização e quebra por palavra.
+
+## Motores de OCR
+
+| Motor | Situação |
+|---|---|
+| **moderno** (ONNX + RapidOCR) | **Funciona.** Inglês e japonês, verificado em texto real de tela. |
+| **do sistema** (Vision, no macOS) | **Funciona.** 53 linhas de uma captura de 1512 × 491 em 456 ms, com caixas corretas. |
+| clássico, de nuvem, por ambiente interpretado | **Regras prontas e testadas**; os adaptadores dependem de bibliotecas nativas, credenciais e instaladores que não há como exercitar aqui. |
+
+As regras que valem para todos eles estão completas e testadas: recusa do motor de nuvem em
+tempo real (RF-122), priorização em modo pontual com as três condições (RF-123), cota mensal
+por credencial com virada de mês (RF-124 a RF-127), preservação do idioma ao trocar de motor
+(RF-149), propagação do idioma para os serviços (RF-147) e o sufixo de modo rápido do motor
+clássico (RF-150).
+
+**Uma armadilha do Objective-C:** as classes só existem depois que o framework que as define
+é carregado no processo. Perguntar por `VNRecognizeTextRequest` antes disso devolve nulo, e o
+motor se declarava indisponível numa máquina em que funciona perfeitamente. O framework é
+carregado explicitamente antes da consulta.
 
 ## Decisões registradas
 

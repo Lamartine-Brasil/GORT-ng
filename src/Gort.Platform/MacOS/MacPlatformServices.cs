@@ -119,11 +119,15 @@ internal sealed class MacPlatformServices : IPlatformServices
             "Sem sincronização explícita com o compositor; o primeiro quadro da " +
             "sobreposição pode piscar."));
 
-        // RF-575 — C20 varia por plataforma. O motor do sistema (Vision) será ligado na
-        // Etapa 14; até lá ele não aparece na lista, em vez de falhar ao ser usado.
-        list.Add(CapabilityStatus.Missing(Capability.SystemTextRecognition,
-            UnavailabilityKind.NotSupported,
-            "O reconhecimento de texto do sistema ainda não está ligado nesta plataforma."));
+        // RF-575 — C20 varia por plataforma: só entra na lista quando está efetivamente
+        // disponível, com os idiomas que o sistema tem instalados (RF-136).
+        using (var vision = new MacVisionOcr())
+        {
+            list.Add(vision.IsAvailable
+                ? CapabilityStatus.Ok(Capability.SystemTextRecognition)
+                : CapabilityStatus.Missing(Capability.SystemTextRecognition,
+                    UnavailabilityKind.NotSupported, vision.UnavailableReason!));
+        }
 
         return new CapabilityReport(list);
     }

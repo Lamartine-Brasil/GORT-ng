@@ -98,6 +98,13 @@ public sealed class AppSession : IDisposable
         var engines = new OcrEngineRegistry();
         engines.Register(new RapidOcrEngine(models: catalog.ModernOcrModels));
 
+        // RF-575 — o motor do sistema só é registrado onde ele existe; o registro filtra
+        // pelos disponíveis, então um motor indisponível nunca chega à lista do usuário.
+        if (OperatingSystem.IsMacOS())
+        {
+            engines.Register(new Gort.Platform.MacOS.MacVisionOcr());
+        }
+
         var session = new AppSession(catalog, paths, profile, advanced, appOptions,
                                      platform, engines);
         session.Notices.AddRange(notices);
