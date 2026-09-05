@@ -206,11 +206,17 @@ public sealed class AppSession : IDisposable
         Service = CreateService(info?.Key ?? "localdb", presetName);
 
         // RF-250 — o rodízio é por serviço: trocar de serviço troca o arquivo.
-        KeysFile = Paths.KeysFor(info.Key);
+        //
+        // A chave é a mesma que foi para `CreateService`, e não `info.Key` direto: com um
+        // catálogo vazio `info` é nulo, e a linha acima já resolveu isso para "localdb".
+        // Repetir a resolução aqui é o que evita que um catálogo ausente — que RF-562 manda
+        // sobreviver — derrube a aplicação de configuração.
+        string serviceKey = info?.Key ?? "localdb";
+        KeysFile = Paths.KeysFor(serviceKey);
         Keys = TranslationKeyStore.Load(KeysFile);
 
         Memory = info is { UsesResultMemory: true }
-            ? new ResultMemory(info.Key, Paths.ResultMemoryFor(info.Key))
+            ? new ResultMemory(serviceKey, Paths.ResultMemoryFor(serviceKey))
             : null;
         Memory?.Load();
 

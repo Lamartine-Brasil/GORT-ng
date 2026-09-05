@@ -201,14 +201,20 @@ public partial class LayerTranslationWindow : Window, ITranslationWindow
     /// <summary>RF-546 — As marcações refletem o estado atual.</summary>
     private void RefreshContextMenu()
     {
-        if (_orderDefault is null) return;
+        // Os quatro itens do menu nascem juntos, mas o guarda confere todos os que usa: se
+        // um dia um deles passar a ser criado à parte, o erro aparece aqui e não em uso.
+        if (_orderDefault is null || _orderCenter is null
+            || _removeSpaces is null || _forcedTransparency is null)
+        {
+            return;
+        }
 
         bool centered = Surface.TextHorizontalAlignment == TextAlignment.Center;
         _orderDefault.IsChecked = !centered;
         _orderCenter.IsChecked = centered;
 
-        _removeSpaces!.IsChecked = ReadRemoveSpaces?.Invoke() ?? false;
-        _forcedTransparency!.IsChecked = ForcedTransparency;
+        _removeSpaces.IsChecked = ReadRemoveSpaces?.Invoke() ?? false;
+        _forcedTransparency.IsChecked = ForcedTransparency;
     }
 
     /// <summary>RF-545 — A alteração vale imediatamente: a janela repinta na hora.</summary>

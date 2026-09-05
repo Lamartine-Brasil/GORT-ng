@@ -5,7 +5,6 @@ using Avalonia.Media.Imaging;
 using Gort.App;
 using Gort.App.Windows;
 using Gort.Core.Calibration;
-using Gort.App.Windows;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Teste visual da ETAPA 11 — modo camada.

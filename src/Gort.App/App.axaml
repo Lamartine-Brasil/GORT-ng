@@ -1,8 +1,10 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Gort.App.App"
+             Name="GORT"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             <!-- No macOS é `Application.Name`, e não o CFBundleName do Info.plist, que dá
+                  nome ao menu do aplicativo. Sem ele o menu diz "Avalonia Application". -->
 
     <Application.Styles>
         <FluentTheme />

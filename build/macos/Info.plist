@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>GORT</string>
+  <key>CFBundleDisplayName</key>
+  <string>GORT</string>
+  <key>CFBundleExecutable</key>
+  <string>Gort.App</string>
+
+  <!-- O identificador é o que a base de permissões do sistema usa como chave. Sem ele, a
+       permissão de gravação de tela fica presa ao processo que LANÇOU o programa — o
+       terminal, o depurador — e some quando ele muda. Foi o que causou o falso negativo de
+       CGPreflightScreenCaptureAccess registrado na decisão 4. -->
+  <key>CFBundleIdentifier</key>
+  <string>com.lamartinebarbosa.gort</string>
+
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSAO__</string>
+  <key>CFBundleVersion</key>
+  <string>__VERSAO__</string>
+
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>12.0</string>
+
+  <!-- A janela de sobreposição desenha sobre a tela inteira e precisa de resolução real
+       em monitores Retina; sem isto o sistema entrega uma superfície ampliada e o texto
+       sai borrado. -->
+  <key>NSHighResolutionCapable</key>
+  <true/>
+
+  <!-- RF-569 — as razões que o sistema mostra ao pedir cada permissão. Uma explicação
+       vaga aqui é o que faz o usuário recusar e concluir que o programa não funciona. -->
+  <key>NSAppleEventsUsageDescription</key>
+  <string>O GORT usa eventos do sistema para posicionar a tradução sobre a janela que você está lendo.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>O GORT usa a síntese de voz do sistema para ler a tradução em voz alta.</string>
+
+  <!-- O programa não aparece no Dock: ele vive no controle remoto e nos atalhos, e um
+       ícone no Dock por cima do jogo é o oposto do que se quer. A janela principal
+       continua acessível pelo controle remoto. -->
+  <key>LSUIElement</key>
+  <false/>
+</dict>
+</plist>

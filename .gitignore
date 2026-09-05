@@ -64,6 +64,11 @@ lib/
 modelos/*
 !modelos/LEIAME.md
 
+# ─── Artefatos de empacotamento ──────────────────────────────────────────────
+# O pacote .app do macOS leva o runtime do .NET dentro dele e passa de 140 MB.
+artefatos/
+*.app/
+
 # ─── Pacotes ─────────────────────────────────────────────────────────────────
 *.nupkg
 packages/

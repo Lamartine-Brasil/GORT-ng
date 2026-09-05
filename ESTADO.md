@@ -18,6 +18,8 @@ Gort.sln
 │   ├── Gort.Ocr.Rapid/         motor de OCR do Apêndice A (ONNX Runtime + RapidOCR)
 │   ├── Gort.Engine/            o ciclo do capítulo 8, passos 7 a 13
 │   └── Gort.App/               interface em Avalonia
+├── build/
+│   └── macos/                  Info.plist e o roteiro que monta GORT.app
 ├── tools/
 │   ├── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
 │   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
@@ -34,27 +36,22 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **a API personalizada** (RF-292 a RF-301). 746 testes passando
-(643 + 39 + 36 + 28).
+Último commit: **o pacote GORT.app do macOS**. 746 testes passando (643 + 39 + 36 + 28),
+compilação sem nenhuma advertência.
 
-Com ela, **acabou o que dava para construir sem depender de coisas de fora desta máquina**.
-O que resta e por que resta:
+O que resta depende de coisas de fora desta máquina:
 
 - **Oito dos nove serviços de tradução** (RF-249 a RF-291) — credenciais que só o usuário
-  tem, ou autenticação por delegação. O rodízio de chaves, os presets e o protocolo de lote
-  já existem; falta o adaptador de cada um.
+  tem, ou autenticação por delegação. O rodízio de chaves, os presets, o protocolo de lote e
+  a API personalizada já existem; falta o adaptador de cada um.
 - **Atualização automática** — RF-416 a RF-435: servidor de distribuição.
 - **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
   servidor da comunidade, navegador embutido.
 - **Captura de janela anexada** — C2/C3, RF-089 a RF-097, não implementadas no macOS.
 - **Motores de OCR clássico, de nuvem e por ambiente interpretado** — as regras estão
   prontas; faltam os SDKs.
-- **Atalhos globais** — a lógica está verificada; o registro no sistema depende da permissão
-  de Acessibilidade, ausente nesta máquina.
-
-Pendência pequena, de acabamento: no macOS o nome do aplicativo na barra de menus aparece
-como "Avalonia Application". O título da janela está certo; falta o empacotamento com
-`Info.plist`.
+- **Atalhos globais** — a lógica está verificada; falta conceder a permissão de
+  Acessibilidade ao GORT.app, que agora aparece na lista do sistema com nome próprio.
 
 ## Etapas concluídas
 
@@ -556,6 +553,26 @@ caminho completo tornaria o recurso inútil para quem não conhece a API de cor.
 - `Trim('{','}')` comia a chave final de `saida = {RESULT_TEXT}`, e o marcador deixava de
   ser reconhecido. As chaves externas só saem quando envolvem o modelo inteiro.
 
+## O pacote do macOS
+
+`build/macos/` — `Info.plist` e o roteiro que monta `GORT.app`.
+
+Um pacote não é enfeite: é o que dá ao programa um **identificador estável na base de
+permissões do sistema**. Rodando solto, a permissão de gravação de tela ficava presa ao
+processo que lançou o programa — o terminal, o editor — e sumia quando ele mudava. Era a
+causa do falso negativo de `CGPreflightScreenCaptureAccess` registrado na decisão 4.
+
+Verificado na máquina: com o pacote, o sistema passou a listar **GORT** com interruptor
+próprio em *Gravação do Áudio do Sistema e da Tela*, e o menu do aplicativo diz **GORT**.
+
+Como rodar:
+
+```
+build/macos/empacotar.sh              # arm64, autossuficiente
+build/macos/empacotar.sh x64          # para Intel
+build/macos/empacotar.sh arm64 . --dependente   # sem o runtime dentro
+```
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -738,6 +755,18 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     do código, que por coincidência era o mesmo valor, então nada parecia errado. As chaves
     foram para o topo do arquivo e um teste confere que um valor DIFERENTE do padrão é
     lido.
+
+31. **O pacote leva o runtime dentro.** São 149 MB, e a alternativa não funciona: um
+    pacote dependente do runtime não abre por duplo clique quando o .NET está instalado
+    fora do caminho padrão — pelo Homebrew, por exemplo —, porque o Finder não passa `PATH`
+    nem `DOTNET_ROOT`. Descoberto tentando: a primeira versão do pacote abriu e morreu com
+    "You must install .NET to run this application". A opção `--dependente` continua lá para
+    quem tiver o runtime no lugar padrão.
+
+32. **Quem nomeia o menu no macOS é `Application.Name`, não o `CFBundleName`.** O
+    `Info.plist` estava certo e o menu continuava dizendo "Avalonia Application"; o nome sai
+    da propriedade do Avalonia, que nunca tinha sido definida. Só a captura da barra de
+    menus mostrou isso — o `Info.plist` parecia resolver.
 
 ## Como rodar os testes
 

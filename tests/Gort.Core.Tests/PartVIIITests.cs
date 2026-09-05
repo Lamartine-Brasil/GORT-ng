@@ -105,7 +105,8 @@ public class PartVIIITests
             new[] { "um", "dois", "tres" }, service, new TranslationContext { SourceCode = "en", TargetCode = "pt" });
 
         Assert.Null(batch.Error);
-        Assert.Equal("PRIMEIRO", batch.Translations[0].Trim());
+        Assert.NotNull(batch.Translations[0]);
+        Assert.Equal("PRIMEIRO", batch.Translations[0]!.Trim());
 
         // Os que faltaram ficam sem tradução; nada é exibido para eles.
         for (int i = 1; i < batch.Translations.Count; i++)
