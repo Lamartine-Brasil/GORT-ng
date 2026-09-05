@@ -25,7 +25,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        612 testes
+    ├── Gort.Core.Tests/        643 testes
     ├── Gort.Platform.Tests/     39 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -34,26 +34,27 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-**A ordem de construção da PARTE X terminou, e a PARTE VIII foi conferida linha a linha.**
-715 testes passando (612 + 39 + 36 + 28).
+Último commit: **a API personalizada** (RF-292 a RF-301). 746 testes passando
+(643 + 39 + 36 + 28).
 
-O que resta não é etapa: é o que depende de coisas de fora desta máquina.
+Com ela, **acabou o que dava para construir sem depender de coisas de fora desta máquina**.
+O que resta e por que resta:
 
-- **Etapa 15** — os nove serviços de tradução de RF-249 a RF-307. A maioria precisa de
-  credenciais que só o usuário tem; o rodízio de chaves e os presets de API, que são a parte
-  construível sem elas, já existem.
-- **Atualização automática** — RF-416 a RF-435, que precisa de um servidor de distribuição.
+- **Oito dos nove serviços de tradução** (RF-249 a RF-291) — credenciais que só o usuário
+  tem, ou autenticação por delegação. O rodízio de chaves, os presets e o protocolo de lote
+  já existem; falta o adaptador de cada um.
+- **Atualização automática** — RF-416 a RF-435: servidor de distribuição.
 - **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
-  servidor da comunidade e navegador embutido.
+  servidor da comunidade, navegador embutido.
 - **Captura de janela anexada** — C2/C3, RF-089 a RF-097, não implementadas no macOS.
 - **Motores de OCR clássico, de nuvem e por ambiente interpretado** — as regras estão
   prontas; faltam os SDKs.
-- **Atalhos globais** — a lógica está verificada, mas o registro no sistema depende da
-  permissão de Acessibilidade, ausente nesta máquina.
+- **Atalhos globais** — a lógica está verificada; o registro no sistema depende da permissão
+  de Acessibilidade, ausente nesta máquina.
 
 Pendência pequena, de acabamento: no macOS o nome do aplicativo na barra de menus aparece
-como "Avalonia Application". O título da janela está certo; o que falta é o empacotamento
-com `Info.plist`.
+como "Avalonia Application". O título da janela está certo; falta o empacotamento com
+`Info.plist`.
 
 ## Etapas concluídas
 
@@ -82,6 +83,7 @@ com `Info.plist`.
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
 | **17 — Interface completa** | RF-481 a RF-546, RF-054 a RF-064, RF-250 a RF-253 | **Completa.** As sete abas de V.3 e as seis janelas de V.4 que não dependem de serviços externos, todas verificadas em imagem. |
 | **19 — Endurecimento** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-567, PARTE VIII | **Completa.** Instância única verificada na máquina, liberação das imagens de região, indicador de memória detalhado, aviso de mudança de monitor, robustez e evolução travadas por teste — inclusive uma varredura do código-fonte para RF-567 — e a PARTE VIII conferida linha a linha. |
+| **15 — API personalizada** | RF-292 a RF-301, RF-306, RF-307 | **Completa.** É o único serviço da PARTE VI que não depende de credencial de terceiro: quem fornece o endereço é o usuário. |
 
 Também prontos, transversais a tudo:
 
@@ -532,6 +534,27 @@ As que mais valem registro:
   truncada, e isso é informação para o usuário que um corte silencioso aqui esconderia.
 - **"Jogo em tela cheia exclusiva"** — a linha exige que o programa DOCUMENTE a limitação.
   Está no README e num aviso permanente na primeira aba, verificado em captura de tela.
+
+## A API personalizada
+
+`Translation/Services/RequestTemplate.cs` e `CustomApiTranslator.cs` — RF-292 a RF-301.
+
+O modelo de requisição fica SEPARADO do serviço porque é tradução de texto em JSON, não
+rede: é a parte que o usuário erra digitando, e a que precisa ser verificável sem endereço
+nenhum. Trinta testes cobrem os marcadores, a sintaxe relaxada `chave = valor`, os vetores
+convertidos elemento a elemento, a validação e a busca recursiva da chave de resultado.
+
+A busca é recursiva por necessidade: a resposta de um serviço real quase nunca é plana — o
+campo útil vem dentro de `data`, `result`, `choices[0].message` — e exigir do usuário o
+caminho completo tornaria o recurso inútil para quem não conhece a API de cor.
+
+**Dois defeitos que só os testes acharam:**
+
+- Um modelo com chaves desbalanceadas virava `{}` em silêncio. O separador de topo nunca sai
+  da profundidade aberta, nenhum par é reconhecido, e o programa enviaria um corpo VAZIO em
+  vez de recusar. Agora há verificação de balanceamento antes da conversão.
+- `Trim('{','}')` comia a chave final de `saida = {RESULT_TEXT}`, e o marcador deixava de
+  ser reconhecido. As chaves externas só saem quando envolvem o modelo inteiro.
 
 ## Decisões registradas
 

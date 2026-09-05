@@ -181,14 +181,29 @@ public sealed class AppSession : IDisposable
     {
         Profile.Normalize();
 
+        // RF-306 — cada preset de API personalizada é uma entrada SEPARADA na lista de
+        // serviços, com identificador "customapi:<nome>". Para o resto do programa ele é o
+        // serviço "customapi", que é quem descreve as suas propriedades no catálogo.
+        string selected = Profile.TranslationService;
+        string? presetName = null;
+
+        if (selected.StartsWith(CustomApiPrefix, StringComparison.Ordinal))
+        {
+            presetName = selected[CustomApiPrefix.Length..];
+            selected = "customapi";
+
+            // RF-307 — um preset removido é um serviço que não existe mais.
+            if (ApiPresets.Find(presetName) is null) { presetName = null; selected = "localdb"; }
+        }
+
         // RF-307 — um serviço salvo no perfil que não exista mais cai para o banco de dados
         // local, em vez de impedir o funcionamento.
-        var info = Catalog.Service(Profile.TranslationService)
+        var info = Catalog.Service(selected)
                    ?? Catalog.Service("localdb")
                    ?? Catalog.TranslationServices.FirstOrDefault();
 
         Service?.Dispose();
-        Service = CreateService(info?.Key ?? "localdb");
+        Service = CreateService(info?.Key ?? "localdb", presetName);
 
         // RF-250 — o rodízio é por serviço: trocar de serviço troca o arquivo.
         KeysFile = Paths.KeysFor(info.Key);
@@ -230,10 +245,23 @@ public sealed class AppSession : IDisposable
         }
     }
 
-    private ITranslationService CreateService(string key)
+    /// <summary>RF-306 — Prefixo dos identificadores de preset de API personalizada.</summary>
+    public const string CustomApiPrefix = "customapi:";
+
+    private ITranslationService CreateService(string key, string? presetName = null)
     {
         if (key == "webfree" && Catalog.FreeWebTranslator is not null)
             return new FreeWebTranslator(Catalog.FreeWebTranslator);
+
+        // VI.5 — a API personalizada é o único serviço da PARTE VI que não depende de
+        // credencial de terceiro: quem fornece o endereço é o usuário.
+        if (key == "customapi")
+        {
+            var preset = presetName is null ? null : ApiPresets.Find(presetName);
+            string url = preset?.Url ?? Advanced.CustomApiUrl;
+
+            return new CustomApiTranslator(url, preset, log: Notices.Add);
+        }
 
         // Os demais serviços entram na Etapa 15. Até lá, o banco de dados local é o que
         // funciona sem rede e sem credencial.

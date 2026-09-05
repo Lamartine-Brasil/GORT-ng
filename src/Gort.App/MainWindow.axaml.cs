@@ -200,7 +200,7 @@ public partial class MainWindow : Window
     private void FillChoices()
     {
         EngineBox.ItemsSource = _session.Engines.Available.Select(e => e.Key).ToList();
-        ServiceBox.ItemsSource = _session.Catalog.TranslationServices.Select(s => s.Key).ToList();
+        ServiceBox.ItemsSource = BuildServiceList();
 
         var service = _session.Catalog.Service(_session.Profile.TranslationService)
                       ?? _session.Catalog.TranslationServices[0];
@@ -1079,6 +1079,21 @@ public partial class MainWindow : Window
 
         return (long)Math.Max(0, overlay.Bounds.Width)
              * (long)Math.Max(0, overlay.Bounds.Height) * 4;
+    }
+
+    /// <summary>
+    /// RF-306 — A lista de serviços, com cada preset de API personalizada como uma entrada
+    /// SEPARADA. Sem isso o usuário teria de escolher "customapi" e depois escolher o preset
+    /// em outro lugar, e o perfil guardaria só metade da decisão.
+    /// </summary>
+    private List<string> BuildServiceList()
+    {
+        var list = _session.Catalog.TranslationServices.Select(s => s.Key).ToList();
+
+        foreach (var preset in _session.ApiPresets.Presets)
+            list.Add(AppSession.CustomApiPrefix + preset.Name);
+
+        return list;
     }
 
     private void Say(string keyOrText)
