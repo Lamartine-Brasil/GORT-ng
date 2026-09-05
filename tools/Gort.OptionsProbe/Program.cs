@@ -146,6 +146,51 @@ static void RenderAuxiliaryWindows(Localizer loc, string outputDir)
     // RF-536 — alterar o limiar REPROCESSA automaticamente, sem passar pelo botão.
     picker.GetControl<Slider>("ThresholdSlider").Value = 200;
     Capture(picker, "janela-conta-gotas-limiar-200.png", outputDir);
+
+    // RF-533 / RF-534 — gerenciamento de áreas e grupos de cor.
+    var regions = new Gort.Core.Regions.RegionManager();
+    var area = regions.AddArea(new Gort.Core.Model.Rect(200, 150, 420, 260));
+    regions.AddArea(new Gort.Core.Model.Rect(700, 400, 300, 180));
+    regions.AddExclusion(new Gort.Core.Model.Rect(260, 200, 120, 60));
+
+    Capture(new Gort.App.Windows.AreaManagerWindow(loc, regions),
+            "janela-areas.png", outputDir);
+
+    var groups = new[]
+    {
+        new Gort.Core.Model.ColorGroup { R = 255, G = 255, B = 255, S2 = 20, V1 = 80, V2 = 100 },
+        new Gort.Core.Model.ColorGroup { R = 250, G = 220, B = 90, S1 = 40, S2 = 100, V1 = 60, V2 = 100 },
+        new Gort.Core.Model.ColorGroup { R = 40, G = 40, B = 40, S2 = 30, V2 = 25 },
+    };
+    Capture(new Gort.App.Windows.ColorGroupsWindow(loc, area, groups),
+            "janela-grupos-de-cor.png", outputDir);
+
+    // RF-054 / RF-055 / RF-063 — as molduras: normal e de exclusão.
+    RenderFrame(loc, regions.Areas[0], 1, "areas.kind_normal", "moldura-area.png", outputDir);
+    RenderFrame(loc, regions.Exclusions[0], 1, "areas.kind_exclusion",
+                "moldura-exclusao.png", outputDir);
+
+    // O controle remoto tem a mesma moldura escura da janela de áreas; os dois passaram a
+    // fixar o tema escuro, para não herdarem texto claro sobre botão claro num sistema
+    // configurado em tema claro.
+    Capture(new Gort.App.Windows.RemoteControlWindow(), "janela-controle-remoto.png", outputDir);
+
+    // Controle: a janela de sobreposição já foi verificada TRANSPARENTE na tela. Se ela
+    // sair preta aqui também, o preto é da captura fora da tela, não das janelas.
+    var overlay = new Gort.App.Windows.OverlayWindow();
+    overlay.Width = 300; overlay.Height = 120;
+    Capture(overlay, "controle-sobreposicao.png", outputDir);
+}
+
+static void RenderFrame(Localizer loc, Gort.Core.Regions.CaptureFrame frame, int index,
+                        string kindKey, string name, string outputDir)
+{
+    var window = new Gort.App.Windows.AreaFrameWindow(
+        frame, index, () => new Gort.Core.Model.Rect(0, 0, 1920, 1080))
+    {
+        KindName = loc[kindKey],
+    };
+    Capture(window, name, outputDir);
 }
 
 static void Click(Window window, string name)

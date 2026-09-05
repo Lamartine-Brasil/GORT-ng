@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.AreaManagerWindow"
+        Width="470" Height="150"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        RequestedThemeVariant="Dark">
+
+  <!-- RF-533 — adicionar área, adicionar exclusão, limpar tudo, aplicar. -->
+  <Border Background="#F21E1E22" CornerRadius="8" BorderBrush="#4A4A52" BorderThickness="1"
+          Padding="12">
+    <StackPanel Spacing="10">
+      <TextBlock x:Name="TitleText" Foreground="White" FontWeight="SemiBold" />
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button x:Name="AddAreaButton" Padding="12,7" />
+        <Button x:Name="AddExclusionButton" Padding="12,7" />
+        <Button x:Name="ColorGroupsButton" Padding="12,7" />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button x:Name="ClearButton" Padding="12,7" />
+        <Button x:Name="ApplyButton" Padding="18,7" />
+        <Button x:Name="CancelButton" Padding="12,7" />
+        <TextBlock x:Name="CountText" Foreground="#C0C0C8" FontSize="12"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</Window>

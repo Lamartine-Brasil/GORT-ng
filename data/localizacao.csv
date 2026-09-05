@@ -339,3 +339,20 @@ filter.none,Sem filtro
 filter.rgb,RGB
 filter.hsv,HSV
 filter.threshold,Limiar
+
+# ─── V.4 — gerenciamento de áreas e grupos de cor (RF-533, RF-534) ────────────
+areas.title,Gerenciamento de áreas
+areas.add,Adicionar área
+areas.add_exclusion,Adicionar exclusão
+areas.color_groups,Grupos de cor
+areas.clear,Limpar tudo
+areas.apply,Aplicar
+areas.cancel,Cancelar
+areas.count,"{0} áreas · {1} exclusões"
+areas.kind_normal,Área
+areas.kind_exclusion,Exclusão
+groups.title,Grupos de cor da área
+groups.check_all,Marcar todos
+groups.apply,Aplicar
+groups.cancel,Cancelar
+groups.entry,"Grupo {0} — RGB({1},{2},{3})  S[{4}-{5}]  V[{6}-{7}]"

@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.AreaFrameWindow"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        Topmost="True"
+        CanResize="False"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent">
+
+  <!-- RF-054 — barra de título e borda dupla, desenhadas. Não há borda de sistema. -->
+  <Canvas x:Name="Surface" Background="#01000000">
+    <Border x:Name="OuterBorder" Canvas.Left="0" Canvas.Top="0" />
+    <Border x:Name="InnerBorder" />
+    <Border x:Name="TitleBar">
+      <TextBlock x:Name="TitleText" Foreground="White" FontSize="11" Margin="6,0,0,0"
+                 VerticalAlignment="Center" />
+    </Border>
+  </Canvas>
+</Window>

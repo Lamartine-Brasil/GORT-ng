@@ -994,7 +994,7 @@ public partial class MainWindow : Window
 
         _remote = new RemoteControlWindow
         {
-            DefineArea = () => _ = DefineAreaAsync(),
+            DefineArea = OpenAreaManager,
             Snapshot = () => _ = TranslateOnceAsync(),
             Start = ToggleLoop,
             Stop = ToggleLoop,
@@ -1145,7 +1145,7 @@ public partial class MainWindow : Window
     // ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>RF-047 — Abre a camada de seleção sobre toda a área de trabalho virtual.</summary>
-    private async Task DefineAreaAsync()
+    private async Task DefineAreaAsync(AreaKind kind = AreaKind.Normal)
     {
         var monitors = _session.Platform.Monitors.Monitors;
         if (monitors.Count == 0) return;
@@ -1175,10 +1175,121 @@ public partial class MainWindow : Window
         // borda e barra de título (RF-073).
         double scale = MonitorGeometry.ScaleOf(monitors, drawn.Value);
         var metrics = FrameGeometry.MetricsFor(scale);
-        _session.Regions.AddArea(FrameGeometry.ToFrameRect(drawn.Value, metrics));
+        var frameRect = FrameGeometry.ToFrameRect(drawn.Value, metrics);
+
+        var frame = kind == AreaKind.Exclusion
+            ? _session.Regions.AddExclusion(frameRect)
+            : _session.Regions.AddArea(frameRect);
+
+        // Se o gerenciamento está aberto, a área nova ganha moldura na hora.
+        if (_areaManager is not null) ShowFrames();
 
         ShowQuickStep();
         ShowLoopState();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RF-054 a RF-064, RF-533, RF-534 — Molduras e gerenciamento de áreas
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private AreaManagerWindow? _areaManager;
+    private readonly List<AreaFrameWindow> _frames = new();
+
+    /// <summary>
+    /// RF-533 — Abre o gerenciamento de áreas, com as molduras visíveis.
+    ///
+    /// A janela fica onde o controle remoto está: é dali que o usuário vem, e as molduras
+    /// ocupam a tela toda, então uma janela centralizada cairia por cima justamente do que
+    /// se está ajustando.
+    /// </summary>
+    private void OpenAreaManager()
+    {
+        if (_areaManager is not null) { _areaManager.Activate(); return; }
+
+        var window = new AreaManagerWindow(_loc, _session.Regions)
+        {
+            AddArea = kind => _ = DefineAreaAsync(kind),
+            OpenColorGroups = OpenColorGroupsForFirstArea,
+            Changed = ShowFrames,
+        };
+
+        window.Finished = _ =>
+        {
+            _areaManager = null;
+            CloseFrames();
+
+            // Aplicar ou cancelar, os dois mexem na lista de áreas: o laço precisa relê-la.
+            ShowLoopState();
+        };
+
+        _areaManager = window;
+
+        if (_remote is not null)
+            window.Position = new PixelPoint(_remote.Position.X, _remote.Position.Y - 170);
+
+        window.Show();
+        ShowFrames();
+    }
+
+    /// <summary>
+    /// RF-054 / RF-064 — Uma moldura por área, reconstruídas quando a lista muda.
+    ///
+    /// Reconstruir em vez de reconciliar é deliberado: a reindexação de RF-064 renumera
+    /// todas as áreas depois da removida, e casar janelas com áreas por posição na lista
+    /// daria exatamente o mesmo trabalho com mais chance de errar.
+    /// </summary>
+    private void ShowFrames()
+    {
+        CloseFrames();
+
+        _session.Regions.SetFramesVisible(true);
+        var monitors = _session.Platform.Monitors.Monitors;
+
+        Gort.Core.Model.Rect Desktop() => MonitorGeometry.VirtualDesktop(monitors);
+
+        int index = 1;
+        foreach (var area in _session.Regions.Areas) Add(area, index++, "areas.kind_normal");
+
+        index = 1;
+        foreach (var e in _session.Regions.Exclusions) Add(e, index++, "areas.kind_exclusion");
+
+        _areaManager?.Refresh();
+
+        void Add(CaptureFrame frame, int number, string kindKey)
+        {
+            var window = new AreaFrameWindow(frame, number, Desktop)
+            {
+                KindName = _loc[kindKey],
+
+                // RF-059 / RF-060 — o recálculo só acontece se o programa já terminou de
+                // inicializar e não está aplicando configuração. A moldura só avisa.
+                AreasChanged = () =>
+                {
+                    if (_busy) return;
+                    _areaManager?.Refresh();
+                },
+            };
+
+            _frames.Add(window);
+            window.Show();
+        }
+    }
+
+    private void CloseFrames()
+    {
+        foreach (var frame in _frames) frame.Close();
+        _frames.Clear();
+    }
+
+    /// <summary>RF-534 — Os grupos de cor da primeira área.</summary>
+    private void OpenColorGroupsForFirstArea()
+    {
+        // RF-063 — áreas de exclusão não oferecem os botões de cor; por isso só as normais
+        // entram aqui.
+        var area = _session.Regions.Areas.FirstOrDefault();
+        if (area is null) { Say("area.none"); return; }
+
+        new ColorGroupsWindow(_loc, area, _session.Profile.ColorGroups).Show(this);
     }
 
     /// <summary>

@@ -25,7 +25,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        558 testes
+    ├── Gort.Core.Tests/        574 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -34,21 +34,19 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **conta-gotas, pré-visualização binarizada e editor de dicionário**.
-651 testes passando (558 + 33 + 36 + 24), as janelas verificadas em imagem.
+Último commit: **as molduras e o gerenciamento de áreas**. 667 testes passando
+(574 + 33 + 36 + 24), as janelas verificadas em imagem.
 
-**Próximo passo — o que resta de V.4:**
+**Próximo passo:**
 
-1. **Gerenciamento de áreas (RF-533)** e **grupos de cor por área (RF-534)**. Dependem do
-   desenho das molduras (RF-047 a RF-056), que também está pendente — é o mesmo trabalho.
-2. **Gerenciamento de chaves de tradução (RF-538)** e **sobre (RF-543)**.
+1. O que resta de V.4: **gerenciamento de chaves de tradução (RF-538)** e **sobre
+   (RF-543)**. Os dois são pequenos.
+2. Depois, a **Etapa 19** — endurecimento, RF-552 a RF-567, e toda a PARTE VIII.
 
 Dependem de coisas que não existem aqui: RF-539 (OCR de nuvem), RF-540 (instalador do motor
-por ambiente interpretado), RF-541 (servidor da comunidade) e RF-542 (navegador embutido).
-
-Depois, a **Etapa 19** — endurecimento, RF-552 a RF-567, e toda a PARTE VIII. A **Etapa 15**
-(nove serviços de tradução) e a atualização automática de RF-416 a RF-435 dependem de
-credenciais e de um servidor de distribuição.
+por ambiente interpretado), RF-541 (servidor da comunidade), RF-542 (navegador embutido), a
+**Etapa 15** (nove serviços de tradução, credenciais) e a atualização automática de RF-416 a
+RF-435 (servidor de distribuição).
 
 ## Etapas concluídas
 
@@ -56,7 +54,7 @@ credenciais e de um servidor de distribuição.
 |---|---|---|
 | **1 — Esqueleto e configuração** | RF-020 a RF-046 | **Persistência completa.** Falta o ciclo de vida da aplicação (RF-001 a RF-019), que depende da interface. |
 | **2 — Abstração de plataforma e captura** | RF-088, RF-100, RF-568 a RF-578 | **Completa.** C1 e C18 implementados nos três sistemas; captura verificada de ponta a ponta no macOS. |
-| **3 — Regiões de captura** | RF-047 a RF-087 | **Modelo e geometria completos** e verificados: conversão moldura→retângulo com escala por monitor, alinhamento de largura, composição, áreas especiais e a regra de índice reversa. Falta o desenho das molduras e da camada de seleção (RF-047 a RF-056, RF-063, RF-080 a RF-084), que depende da interface. |
+| **3 — Regiões de captura** | RF-047 a RF-087 | **Completa.** Modelo, geometria e agora as molduras desenhadas, com mover, redimensionar e a aparência distinta das exclusões. |
 | **5 — Um motor de OCR** | RF-120, RF-121, RF-141 a RF-146 | **Completa e verificada** em texto real de tela. Detecção DBNet e reconhecimento CRNN com decodificação CTC, em inglês e japonês. |
 | **7 — Um serviço de tradução e o modo escuro** | RF-225 a RF-248, RF-308 a RF-331 | **Completa.** É o *primeiro produto utilizável de ponta a ponta*: captura, reconhece, traduz e mostra numa janela. |
 | **8 — Laço, controle e detecção de mudança 🔒** | RF-004, RF-005, RF-009 a RF-014, RF-192 a RF-205, RF-547 a RF-551 | **Completa.** Tradução contínua, protocolo de pausa e os três critérios de aceite do capítulo 9 verificados. |
@@ -75,7 +73,7 @@ credenciais e de um servidor de distribuição.
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
-| **17c — Auxiliares de V.4** | RF-535, RF-536, RF-537 | **Conta-gotas com pré-visualização binarizada e editor de dicionário**, os dois verificados em imagem. Faltam RF-533, RF-534, RF-538, RF-543. |
+| **17c — Auxiliares de V.4** | RF-533 a RF-537, RF-054 a RF-064 | **Molduras, gerenciamento de áreas, grupos de cor por área, conta-gotas e editor de dicionário**, todos verificados em imagem. Faltam RF-538 e RF-543. |
 
 Também prontos, transversais a tudo:
 
@@ -432,6 +430,26 @@ binarização: com limiar 128 só as barras escuras passam; movendo o deslizante
 imagem é reprocessada SEM passar pelo botão, como RF-536 exige, e as faixas intermediárias
 passam a entrar.
 
+## As molduras e o gerenciamento de áreas
+
+A lacuna mais antiga do projeto — o desenho das molduras, pendente desde a Etapa 3 — fechou
+junto com as janelas que dependiam dela.
+
+- `Regions/FrameResize.cs` — RF-056 a RF-058, no NÚCLEO e não na janela, porque é aritmética
+  de retângulos: a janela só traduz ponteiro em chamada. Dezesseis testes cobrem os cantos
+  vencendo os lados, o mínimo de P-12 travando a borda que se move, e o reposicionamento de
+  RF-058.
+- `AreaFrameWindow` — RF-054, RF-055, RF-059, RF-063. Barra de título com tipo, índice,
+  tamanho e posição em tempo real; borda dupla desenhada; vermelha e a 70% de opacidade
+  para as exclusões. A notificação de recálculo é limitada a uma a cada P-13, e o fim do
+  arraste sempre notifica — é o estado final, e deixá-lo esperando o próximo tique deixaria
+  a captura defasada.
+- `AreaManagerWindow` — RF-062, RF-533. Fica onde o controle remoto está: é dali que o
+  usuário vem, e as molduras ocupam a tela toda, então uma janela centralizada cairia por
+  cima do que se está ajustando. Enquanto aberta, as áreas são temporárias (RF-061).
+- `ColorGroupsWindow` — RF-534. A lista mostra os VALORES de cada grupo, não só o índice:
+  escolher entre "grupo 1" e "grupo 2" sem os números é adivinhar.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -571,6 +589,19 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     não existem como janela — RF-047 a RF-056 seguem pendentes —, então não há o que
     rebaixar. O lugar onde isso vai acontecer está marcado no código, junto da regra de
     instância única, que essa sim já vale.
+
+25. **Uma janela transparente sai preta na sonda.** As molduras têm o interior vazado — o
+    usuário precisa ver o que está sendo capturado —, mas na captura fora da tela o interior
+    aparece preto. Não é defeito delas: a sonda renderiza a janela de sobreposição junto,
+    como CONTROLE, e ela sai preta do mesmo jeito, embora tenha sido verificada transparente
+    na tela. A captura compõe sobre um fundo opaco; a imagem serve para conferir estrutura,
+    não transparência.
+
+26. **Tema fixo nas janelas de moldura escura.** A janela de áreas e o controle remoto têm
+    chrome escuro próprio, mas seguiam o tema do sistema: num sistema em tema claro os
+    botões sairiam claros com texto claro. É a mesma armadilha da decisão 15, e desta vez
+    apareceu antes de chegar à tela — a janela de áreas saiu ilegível na sonda. Os dois
+    passaram a fixar o tema escuro.
 
 ## Como rodar os testes
 
