@@ -10,7 +10,8 @@ captura por camada específica de sistema atrás da abstração de RF-577.
 Gort.sln
 ├── data/                       catálogos como DADO, não código (RF-029)
 │   ├── languages.toml          tabela de idiomas (RF-308 a RF-316)
-│   └── engines.toml            motores de OCR, serviços, modelos, fontes, links
+│   ├── engines.toml            motores de OCR, serviços, modelos, fontes, links
+│   └── localizacao.csv         textos da interface (RF-481 a RF-489)
 ├── src/
 │   ├── Gort.Core/              todo o pipeline, sem nenhuma dependência de plataforma
 │   ├── Gort.Platform/          abstração C1–C20 (RF-577), uma implementação por sistema
@@ -23,7 +24,7 @@ Gort.sln
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 │   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        489 testes
+    ├── Gort.Core.Tests/        516 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
@@ -46,6 +47,7 @@ Gort.sln
 | **13 — Análise automática de cor 🔒** | RF-098, RF-099, RF-393 a RF-415 | **Ligada ao ciclo.** A análise construída na primeira leva entrou em uso no passo 14 do fluxo. |
 | **14 — Demais motores de OCR** | RF-122 a RF-140, RF-147 a RF-151 | **Regras completas** e o motor do sistema (C20) funcionando no macOS. Os motores clássico, de nuvem e por ambiente interpretado dependem de SDKs e credenciais que não há como exercitar aqui. |
 | **16 — Recursos auxiliares** | RF-454 a RF-480 | **Completos e verificados:** área que segue o mouse, área de transferência e leitura em voz alta. A captura de janela anexada (RF-089 a RF-097) exige C2/C3, que não estão implementadas no macOS. |
+| **17 — Localização e interface** | RF-481 a RF-489, RF-501 a RF-546 | **Localização completa** e as sete abas de V.1 no ar, com todo texto vindo da tabela. As janelas auxiliares de V.4 ainda não existem. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -72,7 +74,7 @@ Também prontos, transversais a tudo:
 | 14 — Demais motores de OCR | RF-122 a RF-140, RF-147 a RF-151 | |
 | 15 — Demais serviços de tradução | RF-249 a RF-307 | |
 | 16 — Captura de janela anexada e auxiliares | RF-089 a RF-097, RF-454 a RF-480 | Depende da Etapa 12. |
-| 17 — Localização e interface completa | RF-481 a RF-489, RF-501 a RF-546 | |
+| 17 — Janelas auxiliares (V.3 e V.4) | RF-523 a RF-546 | Opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas. |
 | 18 — Atualização, comunidade e depuração | RF-416 a RF-435, RF-490 a RF-500 | |
 | 19 — Endurecimento | RF-552 a RF-567 e toda a PARTE VIII | |
 
@@ -297,6 +299,27 @@ A exclusão da sobreposição do monitoramento da área de transferência (RF-46
 não uma limitação: a sobreposição desenha sobre o texto **original da tela**, e um texto
 vindo de fora não tem posição na tela para ser desenhado em cima.
 
+## Localização e interface
+
+A tabela de textos é `data/localizacao.csv` — um arquivo **externo**, editável diretamente,
+sem recompilar e sem etapa de exportação (RF-489). Acrescentar um idioma de interface é
+acrescentar uma **coluna**.
+
+O leitor entende aspas, vírgulas e quebras de linha dentro de um campo (RF-482). Não é
+luxo: textos de interface têm vírgula o tempo todo, e mensagens longas — a explicação de uma
+permissão que falta, por exemplo — têm quebras de linha.
+
+**RF-485 é uma faca de dois gumes.** Uma chave ausente aparece como o próprio nome, o que
+torna a falta visível para quem traduz — mas não para quem constrói: o programa segue
+funcionando com `app.apply` no lugar de `Aplicar`. Por isso há um teste que **varre o código
+da interface** atrás das chaves usadas e confere que todas existem, transformando um defeito
+silencioso em falha de teste.
+
+As sete abas de V.1 estão no ar, na ordem fixa, com a de Depuração oculta até o modo ser
+ativado (RF-490). O assistente de configuração rápida (RF-515, RF-516) aplica tudo de uma
+vez, e a ordem importa: parar a tradução primeiro, porque tudo o que vem depois mexe em
+configuração que o laço estaria usando.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -375,7 +398,13 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     depender da ordem dos `using` ou de qual membro herdado vence. `HorizontalAlignment` em
     particular *ocultava* silenciosamente uma propriedade de layout do próprio `Control`.
 
-15. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
+15. **Variante de tema da janela principal.** Fixada em clara. O padrão do Avalonia segue o
+    tema do sistema; com o sistema em modo escuro e os fundos claros que a janela principal
+    usa, o texto saía quase invisível — o tema aplicava cor de texto clara sobre fundo
+    claro. Só os rótulos com cor explícita no XAML apareciam. Descoberto olhando a tela: os
+    testes não pegariam.
+
+16. **Região fora da tela (PARTE VIII).** A verificação de que o retângulo toca algum monitor
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.

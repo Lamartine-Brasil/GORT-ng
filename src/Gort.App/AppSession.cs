@@ -3,6 +3,7 @@ using Gort.Core.Caching;
 using Gort.Core.Catalog;
 using Gort.Core.Configuration;
 using Gort.Core.Imaging;
+using Gort.Core.Localization;
 using Gort.Core.Ocr;
 using Gort.Core.Regions;
 using Gort.Core.Shortcuts;
@@ -28,8 +29,10 @@ public sealed class AppSession : IDisposable
 {
     private AppSession(AppCatalog catalog, UserPaths paths, Profile profile,
                        AdvancedOptions advanced, AppOptions appOptions,
-                       IPlatformServices platform, OcrEngineRegistry engines)
+                       IPlatformServices platform, OcrEngineRegistry engines,
+                       string dataDirectory)
     {
+        DataDirectory = dataDirectory;
         Catalog = catalog;
         Paths = paths;
         Profile = profile;
@@ -45,6 +48,10 @@ public sealed class AppSession : IDisposable
         Regions.LoadFrom(profile.Areas, profile.Exclusions,
                          profile.AreaColorGroups.Select(g => (IReadOnlyList<bool>)g).ToList());
         Regions.MouseFollowOnly = advanced.MouseFollowOnly;
+
+        // RF-481 a RF-489 — a tabela de localização é um arquivo de dados externo.
+        Localizer = Localizer.Load(Path.Combine(DataDirectory, "localizacao.csv"));
+        Localizer.SelectLanguage(appOptions.InterfaceLanguage);
 
         // RF-037 / RF-453 — os atalhos vêm do seu próprio arquivo.
         Shortcuts = ShortcutStore.Load(paths.Shortcuts);
@@ -69,6 +76,8 @@ public sealed class AppSession : IDisposable
     public IPlatformServices Platform { get; }
     public OcrEngineRegistry Engines { get; }
     public RegionManager Regions { get; }
+    public Localizer Localizer { get; }
+    public string DataDirectory { get; }
     public ClipboardTranslationGate Clipboard { get; }
     public ClipboardWriter ClipboardOutput { get; }
     public SpeechQueue Speech { get; }
@@ -93,7 +102,8 @@ public sealed class AppSession : IDisposable
     {
         var notices = new List<string>();
 
-        var catalog = AppCatalog.Load(dataDirectory ?? LocateDataDirectory(), notices.Add);
+        string data = dataDirectory ?? LocateDataDirectory();
+        var catalog = AppCatalog.Load(data, notices.Add);
         var paths = new UserPaths(userRoot);
 
         // RF-025 — os padrões são aplicados antes de interpretar o arquivo, então um perfil
@@ -115,7 +125,7 @@ public sealed class AppSession : IDisposable
         }
 
         var session = new AppSession(catalog, paths, profile, advanced, appOptions,
-                                     platform, engines);
+                                     platform, engines, data);
         session.Notices.AddRange(notices);
         return session;
     }

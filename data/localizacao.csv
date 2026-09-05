@@ -1,0 +1,155 @@
+chave,pt-BR
+# ─────────────────────────────────────────────────────────────────────────────
+# RF-481 a RF-489 — Tabela de localização da interface.
+#
+# RF-489: este é um arquivo de DADOS EXTERNO, distribuído junto do programa e
+# editável diretamente, sem recompilar e sem nenhuma etapa de exportação.
+#
+# RF-483: acrescentar um idioma de interface é acrescentar uma COLUNA aqui.
+# Nesta versão só existe o português do Brasil (RF-487), mas o mecanismo é
+# completo.
+#
+# RF-485: uma chave ausente aparece na interface como o próprio nome da chave,
+# para tornar a falta visível.
+#
+# Campos com vírgula ou quebra de linha vão entre aspas.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Janela principal
+app.title,Tradutor de tela
+app.apply,Aplicar
+app.donate,Apoiar o projeto
+app.memory,"memória: {0} MB"
+
+# Abas (V.1)
+tab.basic,Configuração básica
+tab.text,Texto
+tab.additional,Configuração adicional
+tab.translation,Tradução
+tab.other,Outros
+tab.quick,Configuração rápida
+tab.debug,Depuração
+
+# Aba 0 — configuração básica
+basic.ocr,Motor de OCR
+basic.show_ocr,Exibir resultado do OCR
+basic.write_file,Gravar resultado em arquivo
+basic.copy_clipboard,Copiar para a área de transferência
+basic.service,Serviço de tradução
+basic.dictionary,Usar dicionário
+basic.dictionary_file,Arquivo de dicionário
+basic.dictionary_word,Por palavra
+basic.image_correction,Correção de imagem
+basic.filter_rgb,Extrair por RGB
+basic.filter_hsv,Extrair por HSV
+basic.filter_threshold,Limiar
+basic.erosion,Erosão
+basic.preview,Ver resultado da imagem
+
+# Aba 1 — texto
+text.font,Fonte
+text.size,Tamanho
+text.color,Cor do texto
+text.stroke1,Contorno 1
+text.stroke2,Contorno 2
+text.background,Fundo
+text.restore_colors,Restaurar cores padrão
+text.center,Centralizar
+text.remove_spaces,Remover espaços do resultado do OCR
+text.use_background,Usar cor de fundo
+text.number_areas,Exibir número da área
+
+# Aba 2 — configuração adicional
+additional.capture,Captura de imagem
+additional.active_window,Capturar da janela ativa
+additional.scale,Ampliação
+additional.attached_window,Capturar de janela anexada
+additional.speed,Velocidade
+additional.window,Janela de tradução
+additional.always_on_top,Sempre no topo
+additional.profile,Arquivo de configuração
+additional.load,Carregar
+additional.save,Salvar
+additional.restore,Restaurar padrões
+additional.advanced,Configuração avançada
+additional.check_updates,Verificar a última versão ao iniciar
+additional.start_basic,Abrir na aba básica
+
+# Aba 3 — tradução
+translation.source,Idioma de origem
+translation.target,Idioma de destino
+translation.speak,Ler em voz alta
+translation.speak_wait,Aguardar o fim da leitura
+
+# Aba 4 — outros
+other.shortcuts,Atalhos
+other.default,Padrão
+other.clear,Limpar
+other.help,Ajuda
+other.manual,Manual
+other.known_errors,Erros conhecidos
+other.links,Links
+
+# Aba 5 — configuração rápida
+quick.step_color,Qual é a cor do texto que você quer traduzir?
+quick.dark_text,Texto escuro
+quick.light_text,Texto claro
+quick.unknown,Não sei
+quick.step_area,"Selecione na tela a área onde o texto aparece."
+quick.step_confirm,Confira a área marcada.
+quick.done,Pronto
+quick.next,Avançar
+
+# Área de OCR
+area.title,Área de OCR
+area.define,Definir área
+area.clear,Limpar
+area.none,"Nenhuma área definida. É preciso marcar ao menos uma para traduzir."
+area.hint,"Marque na tela onde o texto aparece. A área fica salva e volta na próxima abertura."
+area.selection_hint,"Arraste com o botão esquerdo para marcar a área. Botão direito cancela."
+
+# Tradução
+translate.start,Iniciar tradução
+translate.stop,Parar tradução
+translate.once,Traduzir uma vez
+translate.running,traduzindo
+translate.stopped,parado
+translate.snapshot,Instantâneo
+
+# Controle remoto (V.2)
+remote.area,Área
+remote.snapshot,Instantâneo
+remote.start,Iniciar
+remote.stop,Parar
+remote.settings,Config.
+remote.minimize,Minimizar
+
+# Estado do sistema
+system.title,Estado do sistema
+system.ready,Pronto para traduzir.
+system.unavailable,"Indisponíveis: {0}"
+system.open_settings,Abrir configurações do sistema
+
+# Mensagens
+msg.no_area,"É preciso definir ao menos uma área de OCR antes de traduzir."
+msg.no_engine,Nenhum motor de OCR disponível.
+msg.applied,configuração aplicada e perfil salvo.
+msg.applied_resumed,"configuração aplicada, perfil salvo, tradução retomada."
+msg.apply_aborted,"o laço não parou no prazo: NADA foi aplicado."
+msg.loop_stop_failed,"o laço não parou no prazo; tentando de novo no próximo comando."
+msg.self_capture,"A janela de tradução está sobre uma área de OCR: ela será capturada e traduzida a si mesma. Mova-a para fora."
+msg.translating,traduzindo…
+msg.error,"erro: {0}"
+msg.cycle_result,"{0} ms · {1} bloco(s) · {2} ida(s) à rede"
+
+# Nomes das ações com atalho dedicado (RF-444).
+shortcut.ToggleRealtimeTranslation,Iniciar/parar tradução em tempo real
+shortcut.TranslateOnce,Traduzir uma vez
+shortcut.SnapshotArea,Área instantânea
+shortcut.QuickArea,Área rápida
+shortcut.OpenDictionaryEditor,Abrir editor de dicionário
+shortcut.ToggleTranslationWindow,Ocultar/exibir janela de tradução
+shortcut.ToggleMouseFollowArea,Alternar área que segue o mouse
+
+# RF-486 — o aviso de reinício é exibido NA LÍNGUA NOVA.
+ui.restart_required,"O idioma da interface só muda depois de reiniciar o programa."
