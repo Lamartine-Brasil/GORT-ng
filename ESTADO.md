@@ -27,30 +27,23 @@ Gort.sln
     ├── Gort.Core.Tests/        530 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
-    ├── Gort.Engine.Tests/       19 testes
+    ├── Gort.Engine.Tests/       24 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
 
-## Onde parei — 4 de setembro de 2026
+## Onde parei — 5 de setembro de 2026
 
-Último commit: **Etapa 18 — o retrato de análise**. 618 testes passando (530 + 33 + 36 + 19),
-tudo compilando.
+Último commit: **Etapa 18 ligada ao ciclo**. 623 testes passando (530 + 33 + 36 + 24),
+tudo compilando, aplicação verificada subindo com a aba de depuração no ar.
 
-**Próximo passo, na ordem:**
+**Próximo passo:** escolher entre a **Etapa 17b** (janelas auxiliares de V.3 e V.4 —
+opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas e de chaves) e
+a **Etapa 19** (endurecimento, RF-552 a RF-567, e toda a PARTE VIII). A 17b é mais
+visível; a 19 é a que fecha a especificação.
 
-1. Ligar `DiagnosticRecorder` ao ciclo: chamar `Build` ao fim de `TranslationCycle`, e
-   `CompleteDrawing` no fim do desenho da sobreposição (RF-493), com os tempos e os
-   contadores de acerto do cache de RF-494. O comportamento de RF-495 já está pronto e
-   testado — o gravador cuida dele sozinho quando um ciclo novo chega antes do desenho.
-2. Ligar os sinalizadores de `DebugOptions` à aba de depuração da interface, e à persistência
-   (RF-490 a RF-491, RF-500).
-3. RF-499 — comando de limpar a memória de exibição, protegido enquanto houver gravação
-   em curso.
-4. RF-497 — pasta de análise acessível pela interface.
-
-Depois disso, escolher entre a **Etapa 17b** (janelas auxiliares de V.3 e V.4) e a
-**Etapa 19** (endurecimento e PARTE VIII). A Etapa 15 e a atualização automática de RF-416 a
-RF-435 dependem de coisas de fora: credenciais dos serviços e um servidor de distribuição.
+Fora da ordem de construção, dependem de coisas de fora: a **Etapa 15** (nove serviços de
+tradução, credenciais) e a **atualização automática** de RF-416 a RF-435 (servidor de
+distribuição).
 
 ## Etapas concluídas
 
@@ -75,7 +68,7 @@ RF-435 dependem de coisas de fora: credenciais dos serviços e um servidor de di
 | **— Detecção de mudança 🔒** | RF-192 a RF-205 | **Completa.** |
 | **— Cache e fontes locais** | RF-206 a RF-224, RF-241 a RF-243 | **Completa.** |
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
-| **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Retrato de análise completo** e testado, inclusive a regra de RF-495. Falta ligá-lo ao ciclo e à sobreposição, e a atualização automática (RF-416 a RF-435). |
+| **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
 
 Também prontos, transversais a tudo:
 
@@ -94,7 +87,7 @@ Também prontos, transversais a tudo:
 |---|---|---|
 | 15 — Demais serviços de tradução | RF-249 a RF-307 | Nove serviços. A maioria exige credenciais que só o usuário tem. |
 | 17b — Janelas auxiliares (V.3 e V.4) | RF-523 a RF-546 | Opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas e de chaves. |
-| 18b — Ligação do diagnóstico e atualização | RF-416 a RF-435, RF-491, RF-497 a RF-500 | Ligar o gravador ao ciclo e à sobreposição; a atualização automática precisa de um servidor de distribuição que não existe. |
+| 18b — Atualização automática e comunidade | RF-416 a RF-435 | Precisa de um servidor de distribuição que não existe. |
 | 19 — Endurecimento | RF-552 a RF-567 e toda a PARTE VIII | |
 
 Lacunas conhecidas, fora da ordem de construção:
@@ -369,6 +362,15 @@ utilizável" — é o arquivo que permite ajustar os valores 🔒 sem adivinhar.
 - `DiagnosticCounters` — RF-498. Contadores de OCR, traduções e chamadas de rede, com um
   registro de mensagens com teto, para não crescer sem limite numa sessão longa.
 
+**Ligação ao ciclo.** O gravador entra pelo passo 18 do fluxo, antes do despacho do desenho:
+no modo sobreposição o retrato fica pendente e `OverlaySurface` avisa, pelo evento `Drawn`,
+que o desenho terminou. O aviso sai do **fim do desenho**, e não do fim de `SetBlocks`:
+entre os dois está o agendamento do quadro, que é justamente parte do que RF-494 quer medir.
+Os sinalizadores de `DebugOptions` chegam ao ciclo por `CycleSettings.Diagnostics`, que é
+**nulo fora do modo de depuração** — é assim que o critério de aceite "desativar o modo
+restaura o comportamento normal sem reiniciar" é cumprido literalmente: nada precisa ser
+desfeito porque nada foi ligado.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -457,6 +459,26 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
    fica em `ScreenCapture`, acima da abstração, e não em cada implementação: a regra é da
    especificação, não do sistema. Alguns sistemas devolvem uma imagem vazia em vez de
    recusar, e uma imagem vazia entraria no OCR como texto em branco.
+
+17. **Onde os sinalizadores de RF-500 são honrados.** O requisito manda "repassar ao
+    mecanismo NATIVO de pré-processamento". Aqui o pré-processamento é gerenciado, não uma
+    biblioteca nativa: quem honra "salvar captura" e "salvar resultado da captura" é o
+    próprio ciclo, gravando as duas imagens na pasta de diagnóstico. O efeito observável — o
+    par de imagens que mostra o que o filtro e a ampliação fizeram — é o mesmo, que é o que
+    o requisito quer. Não é desvio de calibragem: RF-500 descreve um repasse, e o repasse
+    não tem para onde ir.
+
+18. **O tempo de apresentação de RF-494 é medido, não estimado.** O cronômetro começa
+    quando o laço entrega o resultado e para no fim do desenho; a parcela de apresentação é
+    o que sobra depois de descontar o dimensionamento e o layout. É a espera pelo
+    compositor, que é a única parte do caminho que o programa não executa — medi-la por
+    diferença é honesto, inventar um número para ela não seria.
+
+19. **RF-497 já estava pronto.** O requisito é "exibir o texto reconhecido junto da
+    tradução", e não a pasta de diagnóstico acessível, como um apontamento anterior deste
+    documento dizia. Ele é a caixa *mostrar texto reconhecido* da aba básica, ligada desde a
+    Etapa 7. O botão que abre a pasta dos retratos existe, mas por conveniência, não por
+    requisito.
 
 ## Como rodar os testes
 

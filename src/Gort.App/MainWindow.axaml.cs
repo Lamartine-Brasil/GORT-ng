@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Gort.App.Windows;
 using Gort.Core.Caching;
 using Gort.Core.Configuration;
+using Gort.Core.Diagnostics;
 using Gort.Core.Imaging;
 using Gort.Core.Localization;
 using Gort.Core.Regions;
@@ -93,6 +94,20 @@ public partial class MainWindow : Window
         TabOther.Header = _loc["tab.other"];
         TabQuick.Header = _loc["tab.quick"];
         TabDebug.Header = _loc["tab.debug"];
+
+        DebugUnlockSpeed.Content = _loc["debug.unlock_speed"];
+        DebugShowCache.Content = _loc["debug.show_cache"];
+        DebugOneLine.Content = _loc["debug.one_line"];
+        DebugWordAreas.Content = _loc["debug.word_areas"];
+        DebugSaveSnapshot.Content = _loc["debug.save_analysis"];
+        DebugWriteResult.Content = _loc["debug.write_result"];
+        DebugNativeHeader.Text = _loc["debug.native_debug"];
+        DebugNativeDebug.Content = _loc["debug.native_debug"];
+        DebugNativeReplacements.Content = _loc["debug.native_replacements"];
+        DebugNativeSaveCapture.Content = _loc["debug.native_save_capture"];
+        DebugNativeSaveResult.Content = _loc["debug.native_save_result"];
+        DebugClearMemory.Content = _loc["debug.clear_memory"];
+        DebugOpenFolder.Content = _loc["debug.open_folder"];
 
         OcrGroupLabel.Text = _loc["basic.ocr"];
         EngineLabel.Text = _loc["basic.ocr"];
@@ -284,7 +299,256 @@ public partial class MainWindow : Window
 
         // RF-490 — o modo de depuração é revelado por um controle escondido: um clique
         // longo no título.
-        TitleText.DoubleTapped += (_, _) => TabDebug.IsVisible = !TabDebug.IsVisible;
+        TitleText.DoubleTapped += (_, _) =>
+        {
+            TabDebug.IsVisible = !TabDebug.IsVisible;
+
+            // Critério de aceite do cap. 27: desativar o modo restaura o comportamento
+            // normal SEM REINICIAR. Como o ciclo relê a configuração a cada volta, apagar
+            // o sinalizador basta — a próxima volta já não recebe o objeto de diagnóstico.
+            _session.Debug.Enabled = TabDebug.IsVisible;
+            ApplyDebugOptions();
+        };
+
+        WireDebugOptions();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cap. 27 — Depuração e diagnóstico
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Cronômetro da parte de desenho do retrato (RF-494).</summary>
+    private System.Diagnostics.Stopwatch? _drawWatch;
+    private double _sizeAndPositionMs;
+
+    private void WireDebugOptions()
+    {
+        foreach (var box in new[]
+                 {
+                     DebugUnlockSpeed, DebugShowCache, DebugOneLine, DebugWordAreas,
+                     DebugSaveSnapshot, DebugWriteResult, DebugNativeDebug,
+                     DebugNativeReplacements, DebugNativeSaveCapture, DebugNativeSaveResult,
+                 })
+        {
+            box.IsCheckedChanged += (_, _) => ApplyDebugOptions();
+        }
+
+        DebugClearMemory.Click += (_, _) => ClearResultMemory();
+        // RF-492 — a pasta dos retratos, aberta no navegador de arquivos do sistema.
+        DebugOpenFolder.Click += (_, _) => OpenExternal(_session.Paths.DiagnosticsDirectory);
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        timer.Tick += (_, _) => { if (TabDebug.IsVisible) ShowCounters(); };
+        timer.Start();
+    }
+
+    /// <summary>
+    /// RF-491 / RF-500 — Os sinalizadores vão para o objeto que o ciclo lê. Não há cópia
+    /// espalhada pela interface: a caixa é a fonte, o objeto é o destino.
+    /// </summary>
+    private void ApplyDebugOptions()
+    {
+        var d = _session.Debug;
+        d.UnlockSpeed = DebugUnlockSpeed.IsChecked == true;
+        d.ShowCacheResults = DebugShowCache.IsChecked == true;
+        d.OneLinePerTranslation = DebugOneLine.IsChecked == true;
+        d.ShowWordAreas = DebugWordAreas.IsChecked == true;
+        d.SaveAnalysis = DebugSaveSnapshot.IsChecked == true;
+        d.WriteResultFile = DebugWriteResult.IsChecked == true;
+        d.NativeDebug = DebugNativeDebug.IsChecked == true;
+        d.NativeShowReplacements = DebugNativeReplacements.IsChecked == true;
+        d.NativeSaveCapture = DebugNativeSaveCapture.IsChecked == true;
+        d.NativeSaveResult = DebugNativeSaveResult.IsChecked == true;
+
+        // RF-496 — a gravação só acontece com o modo de depuração ligado.
+        _session.ResultFile.Enabled = d.Enabled && d.WriteResultFile;
+
+        // RF-491 — "mostrar áreas de palavra" vale para a sobreposição já viva.
+        if (_translationWindow is OverlayWindow overlay)
+            overlay.Canvas.ShowWordAreas = d.Enabled && d.ShowWordAreas;
+    }
+
+    private void ShowCounters()
+    {
+        DebugCounters.Text = _loc.Format("debug.counters",
+            _session.Counters.OcrAttempts, _session.Counters.Translations,
+            _session.Counters.NetworkCalls, _session.Counters.Errors);
+
+        // RF-498 — o registro é acessível; as mais recentes ficam embaixo, como num log.
+        DebugLog.Text = string.Join('\n', _session.Counters.Messages);
+    }
+
+    /// <summary>
+    /// RF-499 — Limpa toda a memória de resultados anteriores.
+    ///
+    /// RF-212 — Enquanto uma gravação está em curso a memória está sendo serializada;
+    /// apagá-la no meio corromperia o arquivo. O comando recusa em vez de esperar: o
+    /// usuário repete o clique, e ninguém fica com a interface travada.
+    /// </summary>
+    private void ClearResultMemory()
+    {
+        var memory = _session.Memory;
+        if (memory is null) return;
+
+        if (memory.IsWriting) { Say("msg.memory_busy"); return; }
+
+        memory.Clear();
+        _session.ResultFile.Reset();
+        Say("msg.memory_cleared");
+    }
+
+    /// <summary>
+    /// RF-492 — Monta e registra o retrato do ciclo, na thread do laço, antes do desenho.
+    ///
+    /// RF-493 — No modo sobreposição o gravador segura o retrato até o desenho terminar; em
+    /// qualquer outro modo ele grava na hora, porque não há parte de desenho a esperar.
+    /// </summary>
+    private void RecordAnalysis(CycleResult result)
+    {
+        if (!_session.Debug.Enabled || !_session.Debug.SaveAnalysis) return;
+
+        try
+        {
+            bool overlay = _session.Profile.WindowMode == WindowMode.Overlay;
+
+            var snapshot = DiagnosticRecorder.Build(
+                result.Regions, result.RecognizedText, result.DisplayText,
+                _session.Profile.WindowMode.ToString(),
+                _session.Profile.OcrEngine,
+                _session.Profile.TranslationService);
+
+            _drawWatch = overlay ? System.Diagnostics.Stopwatch.StartNew() : null;
+
+            // RF-495 — se havia um retrato pendente, ele sai daqui GRAVADO sem a parte de
+            // desenho. É o gravador que cuida disso; a interface não decide descartar nada.
+            _session.Diagnostics.Record(snapshot, waitsForDrawing: overlay);
+        }
+        catch (Exception ex)
+        {
+            // P8 — o diagnóstico nunca derruba o laço.
+            _session.Counters.RecordError(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// RF-493 / RF-494 — O desenho da sobreposição terminou: completa o retrato pendente
+    /// com o que só se sabe depois de desenhar, e grava.
+    /// </summary>
+    private void CompleteAnalysisDrawing(OverlayWindow window)
+    {
+        if (_session.Diagnostics is null || !_session.Diagnostics.HasPending) return;
+
+        try
+        {
+            var surface = window.Canvas;
+            double total = _drawWatch?.Elapsed.TotalMilliseconds ?? 0;
+            double layoutAndDraw = surface.LastLayoutMs + surface.LastDrawMs;
+
+            var drawing = new SnapshotDrawing
+            {
+                WindowRect = SnapshotRect.From(new Gort.Core.Model.Rect(
+                    window.Position.X, window.Position.Y,
+                    (int)window.Bounds.Width, (int)window.Bounds.Height)),
+                TotalMs = total,
+                SizeAndPositionMs = _sizeAndPositionMs,
+                LayoutAndDrawMs = layoutAndDraw,
+
+                // O que sobra do total depois do dimensionamento e do layout é o tempo em
+                // que o quadro esperou pelo compositor: é essa a parcela de apresentação
+                // que RF-494 pede, e ela é medida, não estimada.
+                PresentMs = Math.Max(0, total - _sizeAndPositionMs - layoutAndDraw),
+
+                CacheHits = surface.LastCacheHits,
+                CacheMisses = surface.LastCacheMisses,
+                Options = RenderingOptionsSnapshot(surface),
+            };
+
+            foreach (var block in surface.Blocks)
+                drawing.Blocks.Add(DescribeDrawnBlock(surface, block));
+
+            _session.Diagnostics.CompleteDrawing(drawing);
+        }
+        catch (Exception ex)
+        {
+            _session.Counters.RecordError(ex.Message);
+        }
+        finally
+        {
+            _drawWatch = null;
+        }
+    }
+
+    /// <summary>Abre um caminho no navegador de arquivos do sistema.</summary>
+    private void OpenExternal(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Say(_loc.Format("msg.error", ex.Message));
+        }
+    }
+
+    /// <summary>RF-493 — As opções de renderização em vigor no momento do desenho.</summary>
+    private static Dictionary<string, object> RenderingOptionsSnapshot(OverlaySurface s) => new()
+    {
+        ["fonte"] = s.FontFamilyName,
+        ["estilo"] = s.FontStyle.ToString(),
+        ["contorno"] = s.FontStroke,
+        ["fundo"] = s.UseBackground,
+        ["transparencia_do_fundo"] = s.UseBackgroundTransparency,
+        ["tamanho_automatico"] = s.AutoFontSize,
+        ["tamanho_minimo"] = s.MinFontSize,
+        ["tamanho_maximo"] = s.MaxFontSize,
+        ["tamanho_fixo"] = s.FixedFontSize,
+        ["preservar_orientacao"] = s.PreserveOrientation,
+        ["ampliacao"] = s.Scale,
+        ["dpi_vertical"] = s.VerticalDpi,
+        ["areas_de_palavra"] = s.ShowWordAreas,
+    };
+
+    /// <summary>RF-493 — Tudo o que se sabe sobre um bloco depois de desenhado.</summary>
+    private static SnapshotDrawnBlock DescribeDrawnBlock(OverlaySurface s, OverlayBlock b)
+    {
+        var textColor = b.AutoColor?.Font ?? s.TextColor;
+        var (stroke1, stroke2) = b.AutoColor is not null
+            ? Gort.Core.Model.ColorMath.DeriveStrokeColors(textColor)
+            : (s.Stroke1Color, s.Stroke2Color);
+
+        return new SnapshotDrawnBlock
+        {
+            Text = b.Text,
+            IsTitle = b.IsTitle,
+            Orientation = b.Orientation.ToString(),
+
+            SourceRect = SnapshotRect.From(b.SourceRect),
+            ViewRect = SnapshotRect.From(b.ViewRect),
+            ContentRect = SnapshotRect.From(b.ContentRect),
+            DrawnRect = SnapshotRect.From(b.DrawnRect),
+
+            FontFamily = s.FontFamilyName,
+            FontStyle = s.FontStyle.ToString(),
+            FontSize = b.FinalFontSize,
+            PreferredSize = b.PreferredFontSize,
+            MinimumSize = s.MinFontSize,
+
+            // RF-360 passo 1 — o tamanho estimado do texto ORIGINAL, em pixels de imagem.
+            EstimatedOriginalSize = b.OwnMedianSize,
+
+            FontColor = textColor.ToString(),
+            BackgroundColor = (b.AutoColor?.Background ?? s.BackgroundColor).ToString(),
+            Stroke1Color = stroke1.ToString(),
+            Stroke2Color = stroke2.ToString(),
+
+            UsedAutoColor = b.AutoColor is not null,
+            ContrastCorrected = b.AutoColor?.ContrastCorrected ?? false,
+
+            Lines = b.Lines.ToList(),
+            LineAdvance = b.LineAdvance,
+            Clipped = b.Clipped,
+        };
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -893,23 +1157,45 @@ public partial class MainWindow : Window
             HasTranslationWindow = () => _translationWindow is not null,
             CycleIntervalMs = () => _session.Profile.CycleIntervalMs,
 
-            // RF-491 — "destravar velocidade", só no modo de depuração.
-            UnlockSpeed = () => DebugUnlockSpeed.IsChecked == true,
+            // RF-491 — "destravar velocidade", só no modo de depuração. Lido do objeto de
+            // sinalizadores, e não da caixa: o laço roda em outra thread, e tocar num
+            // controle de interface a partir dela é o que P2 proíbe.
+            UnlockSpeed = () => _session.Debug.Enabled && _session.Debug.UnlockSpeed,
 
             // Passo 18 — o desenho é DESPACHADO para a thread de interface. O laço nunca
             // desenha, e P2 proíbe que ele abra diálogo.
-            Draw = result => Dispatcher.UIThread.Post(() => DrawResult(result)),
+            //
+            // RF-493 — o retrato é registrado AQUI, antes do despacho: no modo sobreposição
+            // ele fica pendente até o desenho terminar, e é o gravador que decide o que
+            // fazer com um pendente que ficou para trás (RF-495).
+            Draw = result =>
+            {
+                RecordAnalysis(result);
+                Dispatcher.UIThread.Post(() => DrawResult(result));
+            },
 
             Repaint = () => Dispatcher.UIThread.Post(() => _translationWindow?.Repaint()),
 
-            ReportError = message => Dispatcher.UIThread.Post(
-                () => Say(_loc.Format("msg.error", message))),
+            ReportError = message =>
+            {
+                // RF-498 — o erro entra no registro de mensagens antes de virar aviso.
+                _session.Counters.RecordError(message);
+                Dispatcher.UIThread.Post(() => Say(_loc.Format("msg.error", message)));
+            },
 
             // Passo 16 — cópia para a área de transferência.
             CopyToClipboard = result => Dispatcher.UIThread.Post(() => CopyResult(result)),
 
-            // Passo 19 — efeitos colaterais.
-            SideEffects = result => Dispatcher.UIThread.Post(() => SpeakResult(result)),
+            // Passo 19 — efeitos colaterais: gravação em arquivo e leitura em voz alta.
+            SideEffects = result =>
+            {
+                // RF-496 — o par vai para o arquivo no formato do banco de dados. Fora da
+                // thread de interface de propósito: é disco, e a fala já é assíncrona.
+                try { _session.ResultFile.Write(result.RecognizedText, result.DisplayText); }
+                catch { /* P8 */ }
+
+                Dispatcher.UIThread.Post(() => SpeakResult(result));
+            },
 
             FlushMemory = () => _session.Memory?.FlushAsync(),
             Stopped = () => Dispatcher.UIThread.Post(ShowLoopState),
@@ -922,10 +1208,18 @@ public partial class MainWindow : Window
     {
         if (_translationWindow is OverlayWindow overlay)
         {
+            // RF-494 — o cálculo de tamanho e posição é uma das parcelas medidas.
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
             // RF-349 / RF-350 — a janela acompanha a união das áreas, sem encolher no meio
             // da tradução.
             overlay.FitTo(_session.Regions.Build().Captures);
-            overlay.SetBlocks(BuildOverlayBlocks(result, overlay));
+            var blocks = BuildOverlayBlocks(result, overlay);
+
+            watch.Stop();
+            _sizeAndPositionMs = watch.Elapsed.TotalMilliseconds;
+
+            overlay.SetBlocks(blocks);
             return;
         }
 
@@ -1088,7 +1382,10 @@ public partial class MainWindow : Window
         surface.Scale = _session.Profile.Scale;
 
         // RF-491 — em depuração, as caixas de origem aparecem no lugar do fundo normal.
-        surface.ShowWordAreas = DebugWordAreas.IsChecked == true;
+        surface.ShowWordAreas = _session.Debug.Enabled && _session.Debug.ShowWordAreas;
+
+        // RF-493 — o retrato pendente só se completa depois do desenho.
+        surface.Drawn += () => CompleteAnalysisDrawing(window);
 
         var primary = _session.Platform.Monitors.Monitors.FirstOrDefault(m => m.IsPrimary);
         surface.VerticalDpi = primary?.Dpi ?? Gort.Core.Calibration.P.ReferenceDpi;
@@ -1192,6 +1489,7 @@ public partial class MainWindow : Window
                 {
                     Text = block.TranslatedText!,
                     ViewRect = rect,
+                    SourceRect = block.SourceBox,   // RF-493
                     IsTitle = block.IsTitle,
                     Orientation = block.Orientation,
                     OwnMedianSize = Gort.Core.Rendering.OverlayTextLayout.MedianLineSize(

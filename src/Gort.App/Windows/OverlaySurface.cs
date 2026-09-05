@@ -22,6 +22,13 @@ public sealed class OverlayBlock
     /// <summary>Retângulo de visualização, em coordenadas da janela de sobreposição.</summary>
     public required GortRect ViewRect { get; set; }
 
+    /// <summary>
+    /// RF-493 — Retângulo de ORIGEM do bloco, na imagem capturada. Não participa do
+    /// desenho; existe para o retrato de análise, onde a comparação entre ele e o de
+    /// visualização é o que mostra se a conversão de coordenadas ficou certa.
+    /// </summary>
+    public GortRect SourceRect { get; init; }
+
     public required bool IsTitle { get; init; }
     public required Orientation Orientation { get; init; }
 
@@ -36,6 +43,15 @@ public sealed class OverlayBlock
     public GortRect ContentRect { get; set; }
     public IReadOnlyList<string> Lines { get; set; } = Array.Empty<string>();
     public bool Clipped { get; set; }
+
+    /// <summary>RF-493 — Tamanho preferido de RF-360, antes da bissecção.</summary>
+    public double PreferredFontSize { get; set; }
+
+    /// <summary>RF-493 — Avanço entre linhas, com a fonte final.</summary>
+    public double LineAdvance { get; set; }
+
+    /// <summary>RF-493 — Retângulo efetivamente coberto pelas linhas desenhadas.</summary>
+    public GortRect DrawnRect { get; set; }
 }
 
 /// <summary>
@@ -139,7 +155,15 @@ public sealed class OverlaySurface : Control
 
         // RF-374 — o cache é descartado ao fim do desenho.
         _cache.Clear();
+
+        // RF-493 — no modo sobreposição o retrato só é gravado DEPOIS daqui. O aviso sai
+        // do fim do desenho, e não do fim de `SetBlocks`: entre os dois há o agendamento do
+        // quadro, que é justamente parte do que RF-494 quer medir.
+        Drawn?.Invoke();
     }
+
+    /// <summary>RF-493 — Disparado ao fim de cada desenho, na thread de interface.</summary>
+    public event Action? Drawn;
 
     private void LayOut(OverlayBlock block, double bodyMedian, bool isLead)
     {
@@ -159,6 +183,10 @@ public sealed class OverlaySurface : Control
                 block.OwnMedianSize, bodyMedian, block.IsTitle, isLead, Scale, VerticalDpi);
             preferred = OverlayTextLayout.Clamp(preferred, MinFontSize, MaxFontSize);
 
+            // RF-493 — o retrato guarda o preferido ANTES da bissecção: a distância entre
+            // ele e o final é justamente o que denuncia um bloco apertado.
+            block.PreferredFontSize = preferred;
+
             size = OverlayTextLayout.FindFontSize(
                 _cache, block.Text, font, orientation, content,
                 MinFontSize, preferred, FontStroke);
@@ -166,10 +194,12 @@ public sealed class OverlaySurface : Control
         else
         {
             size = FixedFontSize;
+            block.PreferredFontSize = FixedFontSize;
         }
 
         block.FinalFontSize = size;
         font = font with { Size = size };
+        block.LineAdvance = TextMetrics.LineAdvance(_cache, font);
 
         double available = orientation == Orientation.Vertical ? content.Height : content.Width;
         block.Lines = LineBreaker.Break(_cache, block.Text, font, orientation, available);
@@ -240,6 +270,8 @@ public sealed class OverlaySurface : Control
             ? ColorMath.DeriveStrokeColors(textColor)
             : (Stroke1Color, Stroke2Color);
 
+        var drawn = GortRect.Empty;
+
         for (int i = 0; i < block.Lines.Count; i++)
         {
             if (string.IsNullOrWhiteSpace(block.Lines[i])) continue;
@@ -247,7 +279,15 @@ public sealed class OverlaySurface : Control
             var band = OverlayTextLayout.LineBand(content, i, advance, orientation);
             DrawLine(context, block.Lines[i], font, new Point(band.X, band.Y),
                      textColor, stroke1, stroke2);
+
+            var covered = new GortRect((int)band.X, (int)band.Y,
+                                       (int)Math.Ceiling(band.Width),
+                                       (int)Math.Ceiling(band.Height));
+            drawn = drawn.IsEmpty ? covered : drawn.Union(covered);
         }
+
+        // RF-493 — o quarto retângulo do bloco desenhado.
+        block.DrawnRect = drawn;
     }
 
     /// <summary>RF-336 — Contorno duplo: externo, interno, preenchimento.</summary>

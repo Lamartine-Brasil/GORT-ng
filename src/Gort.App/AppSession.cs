@@ -2,6 +2,7 @@ using Gort.Core.Auxiliary;
 using Gort.Core.Caching;
 using Gort.Core.Catalog;
 using Gort.Core.Configuration;
+using Gort.Core.Diagnostics;
 using Gort.Core.Imaging;
 using Gort.Core.Localization;
 using Gort.Core.Ocr;
@@ -51,6 +52,10 @@ public sealed class AppSession : IDisposable
 
         // RF-481 a RF-489 — a tabela de localização é um arquivo de dados externo.
         Localizer = Localizer.Load(Path.Combine(DataDirectory, "localizacao.csv"));
+
+        Diagnostics = new DiagnosticRecorder(paths.DiagnosticsDirectory);
+        ResultFile = new ResultFileWriter(
+            Path.Combine(paths.DataDirectory, "resultado-gravado.txt"));
         Localizer.SelectLanguage(appOptions.InterfaceLanguage);
 
         // RF-037 / RF-453 — os atalhos vêm do seu próprio arquivo.
@@ -97,6 +102,20 @@ public sealed class AppSession : IDisposable
 
     /// <summary>Mensagens de diagnóstico da inicialização, para exibir ao usuário uma vez.</summary>
     public List<string> Notices { get; } = new();
+
+    // ── Depuração e diagnóstico, cap. 27 ────────────────────────────────────
+
+    /// <summary>RF-490 / RF-491 — Sinalizadores do modo de depuração.</summary>
+    public DebugOptions Debug { get; } = new();
+
+    /// <summary>RF-498 — Contadores de OCR e de traduções, com registro de mensagens.</summary>
+    public DiagnosticCounters Counters { get; } = new();
+
+    /// <summary>RF-492 a RF-495 — Gravador dos retratos de análise.</summary>
+    public DiagnosticRecorder Diagnostics { get; private set; } = null!;
+
+    /// <summary>RF-496 — Gravação do resultado no formato do banco de dados.</summary>
+    public ResultFileWriter ResultFile { get; private set; } = null!;
 
     public static AppSession Create(string? dataDirectory = null, string? userRoot = null)
     {
@@ -239,6 +258,9 @@ public sealed class AppSession : IDisposable
                 WindowMode = Profile.WindowMode,
                 ServiceIsLocalDatabase = info.Key == "localdb",
                 NumberAreas = Profile.NumberAreas,
+
+                // RF-491 — "traduzir uma linha por vez" desativa o agrupamento em blocos.
+                OneLinePerTranslation = Debug.Enabled && Debug.OneLinePerTranslation,
             },
             Dictionary = Dictionary,
             NumberAreas = Profile.NumberAreas,
@@ -254,8 +276,39 @@ public sealed class AppSession : IDisposable
                 TextBackgroundEnabled = Profile.TextBackground,
                 BackgroundAlpha = Profile.BackgroundColor.A,
             },
+
+            // RF-490 — fora do modo de depuração isto é nulo, e o ciclo volta a ser
+            // exatamente o que era: desligar o modo restaura o comportamento sem reiniciar.
+            Diagnostics = Debug.Enabled ? BuildCycleDiagnostics() : null,
         };
     }
+
+    /// <summary>RF-498 / RF-500 — O que o ciclo recebe para se deixar observar.</summary>
+    private CycleDiagnostics BuildCycleDiagnostics() => new()
+    {
+        Options = Debug,
+        Directory = Paths.DiagnosticsDirectory,
+        Counters = Counters,
+
+        // RF-500 — o pré-processamento aqui é gerenciado, não uma biblioteca nativa; quem
+        // honra os sinalizadores de imagem é o ciclo. O efeito observável é o mesmo.
+        SaveImage = (name, image) =>
+        {
+            if (image is not Gort.Core.Model.ImageBuffer buffer) return;
+            try
+            {
+                string file = Path.Combine(
+                    Paths.DiagnosticsDirectory,
+                    $"{name}-{DateTime.Now:yyyy-MM-dd-HHmmss-fff}.png");
+                Gort.Platform.Diagnostics.PngWriter.Save(buffer, file);
+            }
+            catch (Exception ex)
+            {
+                // P8 — uma falha de disco no diagnóstico não pode derrubar o ciclo.
+                Counters.RecordError(ex.Message);
+            }
+        },
+    };
 
     /// <summary>RF-453 — Os atalhos são gravados no seu arquivo ao aplicar (RF-012).</summary>
     public void SaveShortcuts() => ShortcutStore.Save(Paths.Shortcuts, Shortcuts);

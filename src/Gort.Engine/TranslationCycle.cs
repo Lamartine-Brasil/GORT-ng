@@ -1,6 +1,7 @@
 using System.Text;
 using Gort.Core.Caching;
 using Gort.Core.ColorAnalysis;
+using Gort.Core.Diagnostics;
 using Gort.Core.Catalog;
 using Gort.Core.Imaging;
 using Gort.Core.Model;
@@ -43,6 +44,12 @@ public sealed class CycleSettings
 
     /// <summary>RF-394 / RF-413 — Opções da análise automática de cor.</summary>
     public AutoColorOptions? AutoColor { get; init; }
+
+    /// <summary>
+    /// RF-498 / RF-500 — Observação do ciclo. Nulo fora do modo de depuração, e é assim que
+    /// RF-490 é cumprido: desligar o modo restaura o comportamento normal sem reiniciar.
+    /// </summary>
+    public CycleDiagnostics? Diagnostics { get; init; }
 }
 
 /// <summary>O que um ciclo produziu.</summary>
@@ -141,11 +148,23 @@ public sealed class TranslationCycle
 
         foreach (var region in captured)
         {
+            // RF-500 — "salvar captura": a imagem que entrou, antes de qualquer tratamento.
+            var debug = settings.Diagnostics;
+            if (debug?.Options.NativeSaveCapture == true)
+                debug.SaveImage?.Invoke($"captura-area{region.Index}", region.Image);
+
             // Passo 8 — recorte pelas exclusões, filtro de cor, erosão e ampliação.
             var processed = Preprocessor.Process(
                 region.Image, areas.ExclusionsIn(region.Index), settings.Filter);
 
-            // Passo 9 — reconhecimento.
+            // RF-500 — "salvar resultado da captura": a imagem que o OCR realmente vê. É o
+            // par da anterior: a diferença entre as duas é o efeito do filtro e da ampliação.
+            if (debug?.Options.NativeSaveResult == true)
+                debug.SaveImage?.Invoke($"tratada-area{region.Index}", processed);
+
+            // Passo 9 — reconhecimento. RF-498 — a tentativa é contada aqui, antes do
+            // resultado, porque o que interessa medir é quantas vezes o motor foi chamado.
+            debug?.Counters?.RecordOcr();
             var ocr = settings.Ocr.Recognize(processed, settings.OcrLanguage);
 
             // RF-145 — o erro do motor é conteúdo, não exceção: ele aparece no lugar do
@@ -219,6 +238,9 @@ public sealed class TranslationCycle
         }
 
         foreach (var region in regions) region.RawTranslatedText = batch.Combined;
+
+        // RF-498 — uma tradução por ciclo, com quantos textos foram de fato à rede.
+        settings.Diagnostics?.Counters?.RecordTranslation(batch.NetworkCount);
 
         // RF-189 a RF-191 — montagem do texto exibido.
         var entries = new List<(int AreaIndex, string Recognized, string? Translated)>();

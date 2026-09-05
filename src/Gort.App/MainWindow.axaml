@@ -244,13 +244,32 @@
       <TabItem x:Name="TabDebug" IsVisible="False">
         <ScrollViewer>
           <StackPanel Spacing="10" Margin="4,10">
-            <CheckBox x:Name="DebugUnlockSpeed" Content="Destravar velocidade" />
-            <CheckBox x:Name="DebugShowCache" Content="Mostrar resultados de cache" />
-            <CheckBox x:Name="DebugOneLine" Content="Traduzir uma linha por vez" />
-            <CheckBox x:Name="DebugWordAreas" Content="Mostrar áreas de palavra" />
-            <CheckBox x:Name="DebugSaveSnapshot" Content="Salvar resultado de análise" />
-            <Button x:Name="DebugClearMemory" Content="Limpar memória de resultados" Padding="12,6"
-                    HorizontalAlignment="Left" />
+            <CheckBox x:Name="DebugUnlockSpeed" />
+            <CheckBox x:Name="DebugShowCache" />
+            <CheckBox x:Name="DebugOneLine" />
+            <CheckBox x:Name="DebugWordAreas" />
+            <CheckBox x:Name="DebugSaveSnapshot" />
+            <CheckBox x:Name="DebugWriteResult" />
+
+            <!-- RF-500 — sinalizadores repassados ao pré-processamento. -->
+            <TextBlock x:Name="DebugNativeHeader" Foreground="#606060" FontSize="12"
+                       Margin="0,8,0,0" />
+            <CheckBox x:Name="DebugNativeDebug" Margin="12,0,0,0" />
+            <CheckBox x:Name="DebugNativeReplacements" Margin="12,0,0,0" />
+            <CheckBox x:Name="DebugNativeSaveCapture" Margin="12,0,0,0" />
+            <CheckBox x:Name="DebugNativeSaveResult" Margin="12,0,0,0" />
+
+            <!-- RF-498 — contadores e registro de mensagens. -->
+            <TextBlock x:Name="DebugCounters" Margin="0,8,0,0" FontSize="12" />
+            <TextBox x:Name="DebugLog" IsReadOnly="True" AcceptsReturn="True" Height="140"
+                     FontFamily="Menlo,Consolas,monospace" FontSize="11"
+                     TextWrapping="NoWrap"
+                     HorizontalAlignment="Stretch" />
+
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+              <Button x:Name="DebugClearMemory" Padding="12,6" />
+              <Button x:Name="DebugOpenFolder" Padding="12,6" />
+            </StackPanel>
           </StackPanel>
         </ScrollViewer>
       </TabItem>

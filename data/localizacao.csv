@@ -153,3 +153,21 @@ shortcut.ToggleMouseFollowArea,Alternar área que segue o mouse
 
 # RF-486 — o aviso de reinício é exibido NA LÍNGUA NOVA.
 ui.restart_required,"O idioma da interface só muda depois de reiniciar o programa."
+
+# ─── Cap. 27 — depuração e diagnóstico (RF-490 a RF-500) ─────────────────────
+debug.unlock_speed,Destravar velocidade
+debug.show_cache,Mostrar resultados de cache
+debug.one_line,Traduzir uma linha por vez
+debug.word_areas,Mostrar áreas de palavra
+debug.save_analysis,Salvar resultado de análise
+debug.write_result,Gravar resultado em arquivo
+debug.native_debug,Depurar pré-processamento
+debug.native_replacements,Mostrar substituições
+debug.native_save_capture,Salvar captura
+debug.native_save_result,Salvar resultado da captura
+debug.clear_memory,Limpar memória de resultados
+debug.open_folder,Abrir pasta de diagnóstico
+debug.counters,"OCR: {0} · traduções: {1} · rede: {2} · erros: {3}"
+msg.memory_cleared,Memória de resultados apagada.
+msg.memory_busy,"Há uma gravação em curso; tente de novo em instantes."
+msg.analysis_saved,"Retrato de análise gravado: {0}"
