@@ -10,6 +10,7 @@ using Gort.Core.Regions;
 using Gort.Core.Shortcuts;
 using Gort.Core.Structuring;
 using Gort.Core.Translation;
+using Gort.Core.Translation.Keys;
 using Gort.Core.Translation.Presets;
 using Gort.Core.Translation.Services;
 using Gort.Engine;
@@ -124,6 +125,15 @@ public sealed class AppSession : IDisposable
     /// <summary>RF-302 — Presets de API personalizada, das duas fontes.</summary>
     public ApiPresetStore ApiPresets { get; private set; } = null!;
 
+    /// <summary>
+    /// RF-250 a RF-253 — O rodízio de chaves do serviço ativo. Recarregado ao aplicar
+    /// configuração, porque cada serviço tem o seu arquivo.
+    /// </summary>
+    public TranslationKeyStore Keys { get; private set; } = new();
+
+    /// <summary>Arquivo de chaves do serviço ativo, para a janela gravar nele.</summary>
+    public string KeysFile { get; private set; } = "";
+
     public static AppSession Create(string? dataDirectory = null, string? userRoot = null)
     {
         var notices = new List<string>();
@@ -172,6 +182,10 @@ public sealed class AppSession : IDisposable
 
         Service?.Dispose();
         Service = CreateService(info?.Key ?? "localdb");
+
+        // RF-250 — o rodízio é por serviço: trocar de serviço troca o arquivo.
+        KeysFile = Paths.KeysFor(info.Key);
+        Keys = TranslationKeyStore.Load(KeysFile);
 
         Memory = info is { UsesResultMemory: true }
             ? new ResultMemory(info.Key, Paths.ResultMemoryFor(info.Key))

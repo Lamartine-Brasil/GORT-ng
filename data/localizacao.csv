@@ -356,3 +356,31 @@ groups.check_all,Marcar todos
 groups.apply,Aplicar
 groups.cancel,Cancelar
 groups.entry,"Grupo {0} — RGB({1},{2},{3})  S[{4}-{5}]  V[{6}-{7}]"
+
+# ─── V.4 — chaves de tradução (RF-253, RF-538) ───────────────────────────────
+keys.title,Chaves de tradução
+keys.id,Identificador
+keys.secret,Segredo
+keys.free,Gratuita
+keys.paid,Paga
+keys.add,Adicionar
+keys.edit,Editar
+keys.remove,Remover
+keys.close,Fechar
+keys.state_normal,normal
+keys.state_error,erro
+keys.state_limit,limite
+keys.count,"{0} de {1} chaves."
+keys.full,"O rodízio já tem as {0} chaves que cabem."
+
+# ─── V.4 — sobre (RF-543) ────────────────────────────────────────────────────
+about.title,Sobre
+about.name,GORT — Game & Overall Real-Time Translator
+about.version,"Versão {0}"
+about.build,"Compilado em {0:dd/MM/yyyy}"
+about.dictionaries,Dicionários carregados
+about.dictionary,"{0} — {1} entradas"
+about.no_dictionaries,Nenhum dicionário carregado.
+about.repository,Repositório
+about.project,Página do projeto
+about.close,Fechar

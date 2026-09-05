@@ -170,6 +170,20 @@ static void RenderAuxiliaryWindows(Localizer loc, string outputDir)
     RenderFrame(loc, regions.Exclusions[0], 1, "areas.kind_exclusion",
                 "moldura-exclusao.png", outputDir);
 
+    // RF-538 — gerenciamento de chaves, com os três estados de RF-252 na lista.
+    var keys = new Gort.Core.Translation.Keys.TranslationKeyStore();
+    keys.Set("conta-pessoal", "s1", isFree: true);
+    keys.Set("conta-de-teste", "s2", isFree: true);
+    keys.Set("conta-paga", "s3", isFree: false);
+    keys.Find("conta-de-teste")!.State = Gort.Core.Translation.Keys.KeyState.Limit;
+
+    Capture(new Gort.App.Windows.KeyManagerWindow(loc, keys, ""),
+            "janela-chaves.png", outputDir);
+
+    // RF-543 — sobre.
+    Capture(new Gort.App.Windows.AboutWindow(loc, new[] { ("myDic.txt", 128) }),
+            "janela-sobre.png", outputDir);
+
     // O controle remoto tem a mesma moldura escura da janela de áreas; os dois passaram a
     // fixar o tema escuro, para não herdarem texto claro sobre botão claro num sistema
     // configurado em tema claro.

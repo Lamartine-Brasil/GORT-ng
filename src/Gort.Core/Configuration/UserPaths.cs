@@ -54,6 +54,13 @@ public sealed class UserPaths
     /// <summary>RF-302 — A lista editável de presets, num arquivo próprio.</summary>
     public string ApiPresetsFile => Path.Combine(Root, "presets.toml");
 
+    /// <summary>
+    /// RF-035 / RF-250 — O rodízio de chaves de um serviço, em texto puro, na pasta de
+    /// credenciais — que por isso nunca entra no controle de versão.
+    /// </summary>
+    public string KeysFor(string serviceKey)
+        => Path.Combine(Ensure(Path.Combine(Root, "credenciais")), $"{serviceKey}-chaves.toml");
+
     /// <summary>RF-492 — Pasta dedicada aos retratos de análise.</summary>
     public string DiagnosticsDirectory => Ensure(Path.Combine(Root, "diagnostico"));
 

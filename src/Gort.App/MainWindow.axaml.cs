@@ -164,6 +164,8 @@ public partial class MainWindow : Window
         ShortcutsLabel.Text = _loc["other.shortcuts"];
         AdvancedButton.Content = _loc["other.advanced"];
         DictionaryEditorButton.Content = _loc["dict.title"];
+        KeysButton.Content = _loc["keys.title"];
+        AboutButton.Content = _loc["about.title"];
         HelpLabel.Text = _loc["other.help"];
         ManualButton.Content = _loc["other.manual"];
         KnownErrorsButton.Content = _loc["other.known_errors"];
@@ -316,6 +318,13 @@ public partial class MainWindow : Window
 
         AdvancedButton.Click += (_, _) => OpenAdvancedOptions();
         DictionaryEditorButton.Click += (_, _) => OpenDictionaryEditor();
+
+        // RF-538 — o rodízio de chaves do serviço ativo.
+        KeysButton.Click += (_, _) =>
+            new KeyManagerWindow(_loc, _session.Keys, _session.KeysFile).Show(this);
+
+        // RF-543 — sobre, com as versões dos dicionários carregados.
+        AboutButton.Click += (_, _) => OpenAbout();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1073,6 +1082,25 @@ public partial class MainWindow : Window
                 OpenDictionaryEditor();
                 break;
         }
+    }
+
+    /// <summary>
+    /// RF-543 — Sobre. As "versões dos dicionários" são o que o programa realmente sabe
+    /// deles: o nome do arquivo e quantas entradas foram carregadas. Um número de versão
+    /// que o dicionário não declara seria invenção.
+    /// </summary>
+    private void OpenAbout()
+    {
+        var dictionaries = new List<(string, int)>();
+
+        if (_session.Dictionary is { } dictionary)
+            dictionaries.Add((_session.Profile.DictionaryFile, dictionary.Count));
+
+        new AboutWindow(_loc, dictionaries)
+        {
+            OpenLink = OpenLink,
+            ShowSplash = () => new SplashWindow().Show(this),
+        }.Show(this);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

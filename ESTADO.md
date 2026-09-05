@@ -25,7 +25,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        574 testes
+    ├── Gort.Core.Tests/        585 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -34,16 +34,13 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **as molduras e o gerenciamento de áreas**. 667 testes passando
-(574 + 33 + 36 + 24), as janelas verificadas em imagem.
+Último commit: **chaves de tradução e a janela "sobre"** — a Etapa 17 fechou.
+678 testes passando (585 + 33 + 36 + 24).
 
-**Próximo passo:**
+**Próximo passo: a Etapa 19 — endurecimento.** RF-552 a RF-567 e toda a PARTE VIII.
+É a última etapa da ordem de construção e a que fecha a especificação.
 
-1. O que resta de V.4: **gerenciamento de chaves de tradução (RF-538)** e **sobre
-   (RF-543)**. Os dois são pequenos.
-2. Depois, a **Etapa 19** — endurecimento, RF-552 a RF-567, e toda a PARTE VIII.
-
-Dependem de coisas que não existem aqui: RF-539 (OCR de nuvem), RF-540 (instalador do motor
+Continuam dependendo de coisas de fora: RF-539 (OCR de nuvem), RF-540 (instalador do motor
 por ambiente interpretado), RF-541 (servidor da comunidade), RF-542 (navegador embutido), a
 **Etapa 15** (nove serviços de tradução, credenciais) e a atualização automática de RF-416 a
 RF-435 (servidor de distribuição).
@@ -73,7 +70,7 @@ RF-435 (servidor de distribuição).
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
-| **17c — Auxiliares de V.4** | RF-533 a RF-537, RF-054 a RF-064 | **Molduras, gerenciamento de áreas, grupos de cor por área, conta-gotas e editor de dicionário**, todos verificados em imagem. Faltam RF-538 e RF-543. |
+| **17 — Interface completa** | RF-481 a RF-546, RF-054 a RF-064, RF-250 a RF-253 | **Completa.** As sete abas de V.3 e as seis janelas de V.4 que não dependem de serviços externos, todas verificadas em imagem. |
 
 Também prontos, transversais a tudo:
 
@@ -449,6 +446,24 @@ junto com as janelas que dependiam dela.
   cima do que se está ajustando. Enquanto aberta, as áreas são temporárias (RF-061).
 - `ColorGroupsWindow` — RF-534. A lista mostra os VALORES de cada grupo, não só o índice:
   escolher entre "grupo 1" e "grupo 2" sem os números é adivinhar.
+
+## O rodízio de chaves
+
+`Translation/Keys/TranslationKeyStore.cs` — RF-250 a RF-253. Até P-55 chaves, com estado
+(normal, erro, limite) e a ordem que RF-252 fixa: **gratuitas antes das pagas, começando
+pela primeira em estado normal**. A ordem não é estética — é a ordem em que o rodízio
+consome as chaves, e gastar as gratuitas primeiro deixa as pagas para quando não há
+alternativa.
+
+Duas decisões que os testes fixam:
+
+- **Trocar devolve a chave que assumiu, ou nula.** O serviço precisa distinguir "troquei" de
+  "não há mais": a segunda é um erro para o usuário e a primeira não é. É também o que
+  permite anexar a nota de RF-251 dizendo qual chave passou a ser usada.
+- **O estado não é gravado.** Ele descreve a última sessão, não a chave: uma cota estourada
+  ontem pode ter virado hoje, e abrir o programa com a chave já marcada faria o rodízio
+  pular uma chave boa sem nunca tentar. Editar uma chave também a devolve ao rodízio — o
+  usuário acabou de corrigir o que provavelmente causou o erro.
 
 ## Decisões registradas
 
