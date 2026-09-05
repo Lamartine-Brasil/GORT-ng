@@ -49,6 +49,127 @@ public sealed class TextRecognizer : IDisposable
     /// <summary>Texto reconhecido e a confiança média dos caracteres aceitos.</summary>
     public readonly record struct Recognition(string Text, double Confidence);
 
+    /// <summary>
+    /// Quantas linhas vão em cada chamada ao modelo.
+    ///
+    /// Seis é o agrupamento do modelo de referência. **Não é um valor 🔒** — a PARTE XII não
+    /// se aplica a ele: é padrão de biblioteca, e nenhum parâmetro da PARTE IV o define. O
+    /// número existe porque um lote grande demais desperdiça: a largura do tensor é a da
+    /// linha MAIS LARGA do grupo, e as demais entram preenchidas com zeros. Agrupar linhas
+    /// de larguras muito diferentes custa mais do que economiza.
+    /// </summary>
+    public int BatchSize { get; init; } = 6;
+
+    /// <summary>
+    /// Quanto a linha mais larga de um grupo pode exceder a mais estreita.
+    ///
+    /// Este limite não é economia: é CORREÇÃO. A largura do tensor é a da linha mais larga
+    /// do grupo, e as demais viajam preenchidas com zeros até lá. Preenchimento demais muda
+    /// o que o CTC decodifica — uma linha que sozinha resulta em texto vazio pode ganhar um
+    /// caractere inventado quando é esticada ao triplo. Foi um teste de equivalência que
+    /// mostrou isso; sem o limite, o lote não é a mesma operação mais rápida, é outra
+    /// operação.
+    ///
+    /// **Não é um valor 🔒** — nenhum parâmetro da PARTE IV o define; é consequência do
+    /// modelo, medida aqui.
+    /// </summary>
+    public double BatchWidthRatio { get; init; } = 1.5;
+
+    /// <summary>
+    /// Reconhece várias linhas em POUCAS chamadas ao modelo em vez de uma por linha.
+    ///
+    /// **O motor não usa este caminho, por medição.** A ideia era que o custo fixo de uma
+    /// chamada ao ONNX Runtime dominasse; medido na mesma imagem, pelos dois caminhos, o
+    /// lote saiu 4,9% MAIS LENTO, com resultado idêntico. A largura do tensor num lote é a
+    /// da linha mais larga, e o cálculo desperdiçado com o preenchimento das outras consome
+    /// o que se economiza no custo fixo.
+    ///
+    /// Fica aqui, testado, porque a conclusão é desta máquina e deste modelo: com outro
+    /// provedor de execução — GPU, por exemplo — a conta pode inverter, e então é uma linha
+    /// no motor. `tools/Gort.OcrProbe` refaz a medição.
+    ///
+    /// As linhas são agrupadas por LARGURA porque a largura do tensor é a da mais larga do
+    /// grupo: juntar uma linha curta com uma longa faria a curta viajar preenchida de zeros
+    /// até o comprimento da outra, e o lote custaria mais que as duas chamadas separadas.
+    /// A ordem original é restaurada no fim — quem chamou não precisa saber disso.
+    /// </summary>
+    public Recognition[] RecognizeBatch(IReadOnlyList<ImageBuffer> lines)
+    {
+        var results = new Recognition[lines.Count];
+        if (lines.Count == 0) return results;
+
+        // Índice original preservado: o agrupamento reordena, a resposta não.
+        var order = new List<int>(lines.Count);
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].IsEmpty) results[i] = new Recognition("", 0);
+            else order.Add(i);
+        }
+
+        order.Sort((a, b) => TensorWidthOf(lines[a]).CompareTo(TensorWidthOf(lines[b])));
+
+        int start = 0;
+        while (start < order.Count)
+        {
+            // O grupo cresce até o teto de BatchSize OU até a largura esticar demais — o
+            // que vier primeiro.
+            int narrowest = TensorWidthOf(lines[order[start]]);
+            int count = 1;
+
+            while (count < BatchSize && start + count < order.Count
+                   && TensorWidthOf(lines[order[start + count]]) <= narrowest * BatchWidthRatio)
+            {
+                count++;
+            }
+
+            RunGroup(lines, order, start, count, results);
+            start += count;
+        }
+
+        return results;
+    }
+
+    private void RunGroup(IReadOnlyList<ImageBuffer> lines, List<int> order,
+                          int start, int count, Recognition[] results)
+    {
+        // A largura do lote é a da linha mais larga; as demais entram preenchidas com zeros,
+        // que é como o modelo foi treinado a receber linhas curtas.
+        int width = 0;
+        for (int i = 0; i < count; i++)
+            width = Math.Max(width, TensorWidthOf(lines[order[start + i]]));
+
+        var values = new float[count * 3 * ImageHeight * width];
+        int stride = 3 * ImageHeight * width;
+
+        for (int i = 0; i < count; i++)
+        {
+            var line = lines[order[start + i]];
+            double aspect = (double)line.Width / Math.Max(1, line.Height);
+            int resizedWidth = Math.Max(1, (int)Math.Ceiling(ImageHeight * aspect));
+
+            var resized = ImageOps.ResizeTo(line, resizedWidth, ImageHeight);
+            var single = ImageOps.ToTensor(resized, _order, width, ImageHeight);
+            Array.Copy(single, 0, values, i * stride, stride);
+        }
+
+        var tensor = new DenseTensor<float>(values, new[] { count, 3, ImageHeight, width });
+
+        using var outputs = _session.Run(
+            new[] { NamedOnnxValue.CreateFromTensor(_inputName, tensor) });
+
+        var output = outputs.First().AsTensor<float>();
+
+        for (int i = 0; i < count; i++)
+            results[order[start + i]] = DecodeCtc(output, i);
+    }
+
+    /// <summary>Largura do tensor de uma linha: proporcional à altura fixa, com piso.</summary>
+    private int TensorWidthOf(ImageBuffer line)
+    {
+        double aspect = (double)line.Width / Math.Max(1, line.Height);
+        return Math.Max(MinImageWidth, Math.Max(1, (int)Math.Ceiling(ImageHeight * aspect)));
+    }
+
     public Recognition Recognize(ImageBuffer line)
     {
         if (line.IsEmpty) return new Recognition("", 0);
@@ -68,14 +189,14 @@ public sealed class TextRecognizer : IDisposable
             new[] { NamedOnnxValue.CreateFromTensor(_inputName, tensor) });
 
         var output = results.First().AsTensor<float>();
-        return DecodeCtc(output);
+        return DecodeCtc(output, 0);
     }
 
     /// <summary>
     /// Decodificação CTC gulosa: por passo de tempo toma-se a classe de maior probabilidade,
     /// descartam-se os brancos e colapsam-se as repetições consecutivas.
     /// </summary>
-    private Recognition DecodeCtc(Tensor<float> output)
+    private Recognition DecodeCtc(Tensor<float> output, int item)
     {
         int steps = output.Dimensions[1];
         int classes = output.Dimensions[2];
@@ -91,7 +212,7 @@ public sealed class TextRecognizer : IDisposable
             float bestValue = float.MinValue;
             for (int c = 0; c < classes; c++)
             {
-                float v = output[0, t, c];
+                float v = output[item, t, c];
                 if (v > bestValue) { bestValue = v; best = c; }
             }
 

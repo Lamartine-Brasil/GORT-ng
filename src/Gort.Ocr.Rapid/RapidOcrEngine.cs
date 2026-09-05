@@ -188,6 +188,17 @@ public sealed class RapidOcrEngine : IOcrEngine
         // P-30 — o excedente é perdido silenciosamente (PARTE VIII).
         if (ordered.Count > MaxLines) ordered = ordered.Take(MaxLines).ToList();
 
+        // UMA LINHA POR CHAMADA, por medição.
+        //
+        // O reconhecimento em lote existe em `TextRecognizer.RecognizeBatch` e está testado,
+        // mas o motor NÃO o usa: medido na mesma imagem, pelos dois caminhos, ele saiu 4,9%
+        // MAIS LENTO (66,3 ms contra 69,6 ms em 9 linhas reais; -1,1% em 40 linhas
+        // sintéticas), com zero diferença de texto.
+        //
+        // A razão é a largura do tensor: num lote ela é a da linha MAIS LARGA, e as demais
+        // viajam preenchidas com zeros até lá. Esse desperdício de cálculo consome o que se
+        // economiza no custo fixo por chamada. A hipótese de que o custo fixo dominava
+        // estava errada, e `tools/Gort.OcrProbe` refaz a medição a qualquer momento.
         var lines = new List<(string Text, Rect Box)>(ordered.Count);
         foreach (var detection in ordered)
         {

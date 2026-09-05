@@ -29,15 +29,15 @@ Gort.sln
 └── tests/
     ├── Gort.Core.Tests/        643 testes
     ├── Gort.Platform.Tests/     39 testes
-    ├── Gort.Ocr.Tests/          36 testes
+    ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **o pacote GORT.app do macOS**. 746 testes passando (643 + 39 + 36 + 28),
-compilação sem nenhuma advertência.
+Último commit: **a medição do reconhecimento em lote** — um resultado negativo, registrado
+com os números. 750 testes passando (643 + 39 + 40 + 28).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -144,9 +144,22 @@ do cache*. Medido de ponta a ponta com o ciclo real, numa caixa de diálogo de d
 | Tela inteira de IDE, 51 linhas, 29 blocos, em cache | 1054 ms | estoura |
 
 O alvo do produto é a caixa de diálogo, e é para ela que a área de OCR existe. A tela
-inteira estoura porque o reconhecimento é por linha; se for preciso mais margem, o caminho
-é processar as linhas em lote — o modelo de referência agrupa de 6 em 6 —, o que ainda não
-foi feito.
+inteira estoura porque o custo cresce com o número de linhas.
+
+**O lote foi tentado e MEDIDO: não ajuda.** A hipótese era que o custo fixo de cada chamada
+ao modelo dominasse, e que agrupar as linhas — o modelo de referência agrupa de 6 em 6 —
+recuperasse a margem. Medido na mesma imagem, pelos dois caminhos:
+
+| Caminho | 9 linhas reais | 40 linhas sintéticas |
+|---|---|---|
+| uma linha por chamada | **66,3 ms** | **810 ms** |
+| em lote de 6 | 69,6 ms | 819 ms |
+
+Zero diferença de texto entre os dois. A razão é a largura do tensor: num lote ela é a da
+linha MAIS LARGA, e as demais viajam preenchidas com zeros até lá — o cálculo desperdiçado
+consome o que se economiza no custo fixo. O motor continua reconhecendo uma linha por
+chamada; `TextRecognizer.RecognizeBatch` fica testado, mas não é usado, porque a conclusão é
+desta máquina e deste modelo. `tools/Gort.OcrProbe` refaz a medição.
 
 **Permissões no macOS (RF-569).** `CGPreflightScreenCaptureAccess` dá falso negativo quando
 o programa roda sob um processo responsável já autorizado (um terminal, um ambiente de
@@ -767,6 +780,26 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     `Info.plist` estava certo e o menu continuava dizendo "Avalonia Application"; o nome sai
     da propriedade do Avalonia, que nunca tinha sido definida. Só a captura da barra de
     menus mostrou isso — o `Info.plist` parecia resolver.
+
+33. **O reconhecimento em lote não ajuda — medido, não suposto.** A hipótese era que o
+    custo fixo de cada chamada ao modelo dominasse. Na mesma imagem, pelos dois caminhos, o
+    lote saiu 4,9% MAIS LENTO com resultado idêntico. A largura do tensor num lote é a da
+    linha mais larga, e o cálculo desperdiçado com o preenchimento das outras consome o que
+    se economizaria. O código fica, testado e não usado, porque a conclusão é desta máquina
+    e deste modelo — com um provedor de execução por GPU a conta pode inverter, e então é
+    uma linha no motor.
+
+34. **A primeira comparação não queria dizer nada.** Rodei a sonda duas vezes, uma com cada
+    caminho, e comparei 592 ms com 389 ms — só que a sonda captura a tela VIVA, e entre as
+    duas execuções ela mudou: 25 linhas contra 9. A medição só passou a significar alguma
+    coisa quando os dois caminhos passaram a rodar sobre a MESMA imagem, dentro da mesma
+    execução.
+
+35. **Um lote muda o que o CTC decodifica.** A primeira versão do lote agrupava as linhas
+    só por tamanho de grupo, e um teste de equivalência mostrou uma linha que sozinha
+    resultava em texto vazio ganhando um caractere inventado ao ser esticada ao triplo com
+    zeros. O limite de 1,5× na variação de largura dentro de um grupo é correção, não
+    economia — sem ele o lote não é a mesma operação mais rápida, é outra operação.
 
 ## Como rodar os testes
 

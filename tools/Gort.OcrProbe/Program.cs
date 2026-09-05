@@ -102,4 +102,50 @@ using (var motor = new SafeOcrEngine(new RapidOcrEngine(models: modelos)))
 }
 Console.WriteLine();
 
+// ── Reconhecimento em lote: a mesma imagem pelos dois caminhos ──────────────
+//
+// A comparação tem de ser na MESMA imagem. Rodar o programa duas vezes não serve: a sonda
+// captura a tela viva, e entre uma execução e outra ela muda — a primeira tentativa
+// comparou 25 linhas com 9 e não queria dizer nada.
+{
+    string? modeloRec = ModelLocator.Find(modelos?.For("en")?.Model ?? ModelLocator.RecognitionModel);
+    string? modeloDet = ModelLocator.Find(modelos?.Detection ?? ModelLocator.DetectionModel);
+
+    if (modeloRec is not null && modeloDet is not null)
+    {
+        Console.WriteLine("Reconhecimento em lote, na mesma imagem");
+        Console.WriteLine(new string('─', 78));
+
+        using var detector = new Gort.Ocr.Rapid.Detection.TextDetector(modeloDet);
+        var caixas = detector.Detect(imagem);
+
+        var recortes = caixas
+            .Select(d => Gort.Ocr.Rapid.ImageOps.Crop(imagem, d.Box))
+            .ToArray();
+
+        using var rec = new Gort.Ocr.Rapid.Recognition.TextRecognizer(modeloRec);
+
+        // Aquecimento: a primeira chamada paga a preparação da sessão.
+        if (recortes.Length > 0) rec.Recognize(recortes[0]);
+
+        var t1 = Stopwatch.StartNew();
+        var umPorVez = recortes.Select(rec.Recognize).ToArray();
+        t1.Stop();
+
+        var t2 = Stopwatch.StartNew();
+        var emLote = rec.RecognizeBatch(recortes);
+        t2.Stop();
+
+        int diferentes = umPorVez.Where((r, i) => r.Text != emLote[i].Text).Count();
+
+        Console.WriteLine($"  {recortes.Length} linhas detectadas");
+        Console.WriteLine($"  uma por vez : {t1.Elapsed.TotalMilliseconds,7:0.#} ms");
+        Console.WriteLine($"  em lote     : {t2.Elapsed.TotalMilliseconds,7:0.#} ms");
+        Console.WriteLine($"  diferença   : {(t1.Elapsed.TotalMilliseconds <= 0 ? 0 : (1 - t2.Elapsed.TotalMilliseconds / t1.Elapsed.TotalMilliseconds) * 100),7:0.#}% "
+                          + "(positivo = o lote é mais rápido)");
+        Console.WriteLine($"  textos diferentes entre os dois caminhos: {diferentes}");
+        Console.WriteLine();
+    }
+}
+
 return 0;
