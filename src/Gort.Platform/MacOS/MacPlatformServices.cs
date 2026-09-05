@@ -38,6 +38,8 @@ internal sealed class MacPlatformServices : IPlatformServices
     public IMonitorProvider Monitors { get; }
     public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; }
     public IWindowEffects WindowEffects { get; } = new MacWindowEffects();
+    public Gort.Platform.Input.ICursorPosition Cursor { get; } = new MacCursorPosition();
+    public Gort.Platform.Input.ITextToSpeech Speech { get; } = new MacTextToSpeech();
 
     /// <summary>RF-576 — Tudo apurado uma única vez, na inicialização.</summary>
     private static CapabilityReport Detect(IMonitorProvider monitors)
@@ -94,6 +96,7 @@ internal sealed class MacPlatformServices : IPlatformServices
         list.Add(CapabilityStatus.Ok(Capability.ClickThrough));
         list.Add(CapabilityStatus.Ok(Capability.TrayIcon));
         list.Add(CapabilityStatus.Ok(Capability.Clipboard));
+        // RF-573 — C15 pode não existir; a opção fica desabilitada com explicação.
         list.Add(CapabilityStatus.Ok(Capability.SpeechSynthesis));
         list.Add(CapabilityStatus.Ok(Capability.VectorTextOutline));
         list.Add(CapabilityStatus.Ok(Capability.TextMeasurement));
@@ -253,6 +256,7 @@ internal sealed class MacPlatformServices : IPlatformServices
     public void Dispose()
     {
         Keyboard.Dispose();
+        Speech.Dispose();
         _backend.Dispose();
     }
 }

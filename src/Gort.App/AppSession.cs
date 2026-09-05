@@ -1,3 +1,4 @@
+using Gort.Core.Auxiliary;
 using Gort.Core.Caching;
 using Gort.Core.Catalog;
 using Gort.Core.Configuration;
@@ -49,6 +50,11 @@ public sealed class AppSession : IDisposable
         Shortcuts = ShortcutStore.Load(paths.Shortcuts);
         Dispatcher = new ShortcutDispatcher(Shortcuts);
 
+        // Cap. 24 e 25 — recursos auxiliares.
+        Clipboard = new ClipboardTranslationGate();
+        ClipboardOutput = new ClipboardWriter();
+        Speech = new SpeechQueue(() => platform.Speech.IsSpeaking);
+
         Pipeline = new TranslationPipeline();
         Cycle = new TranslationCycle(Platform.Capture, Pipeline);
 
@@ -63,6 +69,9 @@ public sealed class AppSession : IDisposable
     public IPlatformServices Platform { get; }
     public OcrEngineRegistry Engines { get; }
     public RegionManager Regions { get; }
+    public ClipboardTranslationGate Clipboard { get; }
+    public ClipboardWriter ClipboardOutput { get; }
+    public SpeechQueue Speech { get; }
     public ShortcutSet Shortcuts { get; }
     public ShortcutDispatcher Dispatcher { get; }
     public TranslationPipeline Pipeline { get; }
@@ -136,6 +145,22 @@ public sealed class AppSession : IDisposable
         Pipeline.SeparatorToken = info?.SeparatorToken ?? Gort.Core.Calibration.P.SeparatorToken;
         Pipeline.Memory = Memory;
         Pipeline.IgnoreEmptyTranslation = Advanced.IgnoreEmptyTranslation;
+
+        // RF-465 / RF-473 — os recursos auxiliares seguem o perfil e as opções avançadas.
+        Clipboard.Enabled = Advanced.ClipboardTranslation;
+        Clipboard.ShowOriginal = Advanced.ClipboardShowOriginal;
+        Clipboard.ShowTranslating = Advanced.ClipboardShowTranslating;
+
+        // RF-472 — aplicar configurações limpa o estado de "traduzindo pela área de
+        // transferência".
+        Clipboard.Reset();
+
+        ClipboardOutput.Enabled = Profile.CopyToClipboard;
+        ClipboardOutput.Format = Profile.CopyFormat;
+
+        Speech.Enabled = Profile.SpeakResult;
+        Speech.WaitForPrevious = Profile.SpeakWaitForPrevious;
+        Speech.SynthesizerAvailable = Platform.Speech.IsAvailable;
 
         Dictionary = Profile.UseDictionary
             ? CorrectionDictionary.Load(Path.Combine(Paths.DataDirectory, Profile.DictionaryFile))

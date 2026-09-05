@@ -54,6 +54,7 @@ public partial class MainWindow : Window
         ShowAreas();
 
         FillSpeeds();
+        StartMouseFollow();
 
         DefineAreaButton.Click += async (_, _) => await DefineAreaAsync();
         TranslateLoopButton.Click += (_, _) => ToggleLoop();
@@ -361,6 +362,12 @@ public partial class MainWindow : Window
                 _ = DefineAreaAsync();
                 break;
 
+            case ShortcutAction.ToggleMouseFollowArea:
+                // RF-459 — o modo usa somente a área que segue o mouse, por padrão.
+                _session.Regions.MouseFollowActive = !_session.Regions.MouseFollowActive;
+                ShowAreas();
+                break;
+
             case ShortcutAction.ToggleTranslationWindow:
                 if (_translationWindow is Window { IsVisible: true } visible) visible.Hide();
                 else ShowTranslationWindow();
@@ -379,6 +386,80 @@ public partial class MainWindow : Window
         _session.Profile.LayerY = layer.Position.Y;
         _session.Profile.LayerWidth = (int)layer.Bounds.Width;
         _session.Profile.LayerHeight = (int)layer.Bounds.Height;
+    }
+
+    /// <summary>
+    /// RF-473 / RF-474 — Copia o resultado do ciclo. A cópia ocorre somente quando o texto
+    /// mudou — garantido por só ser chamada no caminho completo — e falhas de acesso à área
+    /// de transferência são ignoradas SILENCIOSAMENTE: perder uma cópia é melhor que
+    /// interromper a tradução.
+    /// </summary>
+    private void CopyResult(CycleResult result)
+    {
+        if (!_session.ClipboardOutput.ShouldCopy()) return;
+
+        try
+        {
+            string text = _session.ClipboardOutput.Compose(
+                result.RecognizedText, result.DisplayText);
+
+            if (!string.IsNullOrWhiteSpace(text)) Clipboard?.SetTextAsync(text);
+        }
+        catch
+        {
+            // RF-474 — silêncio.
+        }
+    }
+
+    /// <summary>
+    /// RF-476 a RF-480 — Leitura em voz alta do resultado do ciclo.
+    /// </summary>
+    private void SpeakResult(CycleResult result)
+    {
+        // RF-478 — no modo sobreposição, os tokens separadores saem antes da leitura.
+        string text = Gort.Core.Auxiliary.SpeechQueue.Clean(
+            result.DisplayText, _session.Profile.WindowMode, _session.Pipeline.SeparatorToken);
+
+        switch (_session.Speech.Decide(text))
+        {
+            case Gort.Core.Auxiliary.SpeechQueue.Decision.Speak:
+                _session.Platform.Speech.Speak(text, interrupt: false);
+                break;
+
+            case Gort.Core.Auxiliary.SpeechQueue.Decision.SpeakInterrupting:
+                _session.Platform.Speech.Speak(text, interrupt: true);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// RF-454 a RF-457 — A área que segue o mouse reposiciona-se a cada P-122, e só dispara
+    /// o recálculo das áreas quando a posição EFETIVAMENTE mudou, no máximo uma vez a cada
+    /// P-123.
+    /// </summary>
+    private void StartMouseFollow()
+    {
+        var gate = Gort.Core.Regions.RecalculationGate.ForMouseFollow();
+        gate.Enabled = true;
+
+        var timer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(Gort.Core.Calibration.P.MouseFollowTimerMs),
+        };
+
+        timer.Tick += (_, _) =>
+        {
+            if (!_session.Regions.MouseFollowActive) return;
+            if (!_session.Platform.Cursor.TryGet(out int x, out int y)) return;
+
+            // RF-457 — o recálculo só é disparado quando a posição mudou.
+            if (!_session.Regions.MoveMouseFollowTo(x, y)) return;
+            if (!gate.ShouldRecalculate()) return;
+
+            ShowAreas();
+        };
+
+        timer.Start();
     }
 
     private void ShowTranslationWindow()
@@ -538,6 +619,12 @@ public partial class MainWindow : Window
 
             ReportError = message => Dispatcher.UIThread.Post(() =>
                 ResultText.Text = $"erro no laço: {message}"),
+
+            // Passo 16 — cópia para a área de transferência, quando ativa e o texto mudou.
+            CopyToClipboard = result => Dispatcher.UIThread.Post(() => CopyResult(result)),
+
+            // Passo 19 — efeitos colaterais: gravação em arquivo e leitura em voz alta.
+            SideEffects = result => Dispatcher.UIThread.Post(() => SpeakResult(result)),
 
             FlushMemory = () => _session.Memory?.FlushAsync(),
 

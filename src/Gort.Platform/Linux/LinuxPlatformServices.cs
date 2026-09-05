@@ -244,6 +244,14 @@ internal sealed class LinuxPlatformServices : IPlatformServices
     /// </summary>
     public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
 
+    public Gort.Platform.Input.ICursorPosition Cursor { get; } =
+        new Gort.Platform.Input.NoCursorPosition();
+
+    /// <summary>RF-573 — A síntese de voz pode não existir; a opção fica desabilitada.</summary>
+    public Gort.Platform.Input.ITextToSpeech Speech { get; } =
+        new Gort.Platform.Input.NoTextToSpeech(
+            "A síntese de voz ainda não está ligada nesta plataforma.");
+
     public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; } =
         new Gort.Platform.Input.InactiveKeyboardHook(
             "O interceptador global de teclado ainda não está ligado nesta plataforma.");

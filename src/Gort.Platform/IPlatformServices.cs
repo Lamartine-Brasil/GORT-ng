@@ -32,6 +32,12 @@ public interface IPlatformServices : IDisposable
     /// <summary>C5, C7 e C8 — Efeitos de janela alternáveis em tempo de execução.</summary>
     IWindowEffects WindowEffects { get; }
 
+    /// <summary>Posição do cursor, para a área de OCR que segue o mouse (RF-454).</summary>
+    Input.ICursorPosition Cursor { get; }
+
+    /// <summary>C15 — Síntese de voz (cap. 25). RF-573 — pode não existir.</summary>
+    Input.ITextToSpeech Speech { get; }
+
     /// <summary>
     /// C10 — Atalho global de teclado. Quando indisponível, o gancho é inerte e explica o
     /// motivo; o usuário opera pelo controle remoto (RF-569).
@@ -99,6 +105,11 @@ internal sealed class UnsupportedPlatformServices : IPlatformServices
         "Este sistema operacional ainda não tem implementação da camada de plataforma.");
 
     public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
+
+    public Input.ICursorPosition Cursor { get; } = new Input.NoCursorPosition();
+
+    public Input.ITextToSpeech Speech { get; } = new Input.NoTextToSpeech(
+        "Este sistema operacional ainda não tem implementação da camada de plataforma.");
 
     public CapabilityStatus RequestPermission(Capability capability) => Capabilities[capability];
 

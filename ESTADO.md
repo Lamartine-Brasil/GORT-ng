@@ -23,7 +23,7 @@ Gort.sln
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 │   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        467 testes
+    ├── Gort.Core.Tests/        489 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
@@ -45,6 +45,7 @@ Gort.sln
 | **12 — Modo sobreposição, layout 🔒** | RF-344 a RF-386, RF-392 | **Completa e verificada.** Colisões, tamanho automático de fonte, quebra por caractere e desenho sobre o texto original. |
 | **13 — Análise automática de cor 🔒** | RF-098, RF-099, RF-393 a RF-415 | **Ligada ao ciclo.** A análise construída na primeira leva entrou em uso no passo 14 do fluxo. |
 | **14 — Demais motores de OCR** | RF-122 a RF-140, RF-147 a RF-151 | **Regras completas** e o motor do sistema (C20) funcionando no macOS. Os motores clássico, de nuvem e por ambiente interpretado dependem de SDKs e credenciais que não há como exercitar aqui. |
+| **16 — Recursos auxiliares** | RF-454 a RF-480 | **Completos e verificados:** área que segue o mouse, área de transferência e leitura em voz alta. A captura de janela anexada (RF-089 a RF-097) exige C2/C3, que não estão implementadas no macOS. |
 | **4 — Pré-processamento** | RF-101 a RF-119 | **Completa** no núcleo. Conta-gotas e pré-visualização binarizada existem como função (`Preprocessor.Preview`); falta a janela. |
 | **6 — Estruturação e agrupamento 🔒** | RF-152 a RF-179 | **Completa e verificada.** Todos os seis critérios de aceite do cap. 15 passam, mais 8 casos gravados em arquivo. |
 | **— Tratamento textual** | RF-180 a RF-191 | **Completa.** |
@@ -282,6 +283,19 @@ clássico (RF-150).
 é carregado no processo. Perguntar por `VNRecognizeTextRequest` antes disso devolve nulo, e o
 motor se declarava indisponível numa máquina em que funciona perfeitamente. O framework é
 carregado explicitamente antes da consulta.
+
+## Recursos auxiliares
+
+| Recurso | Situação |
+|---|---|
+| Área que segue o mouse (RF-454 a RF-463) | **Funciona.** Posição do cursor real, com o portão de P-123 limitando o recálculo. |
+| Área de transferência (RF-464 a RF-475) | **Funciona.** Monitoramento e cópia do resultado nos três formatos. |
+| Leitura em voz alta (RF-476 a RF-480) | **Funciona.** Verificada: `IsSpeaking` transiciona corretamente, que é o que RF-477 precisa. |
+| Captura de janela anexada (RF-089 a RF-097) | **Não implementada.** Exige C2 e C3; no macOS isso significa ScreenCaptureKit. |
+
+A exclusão da sobreposição do monitoramento da área de transferência (RF-467) é estrutural,
+não uma limitação: a sobreposição desenha sobre o texto **original da tela**, e um texto
+vindo de fora não tem posição na tela para ser desenhado em cima.
 
 ## Decisões registradas
 
