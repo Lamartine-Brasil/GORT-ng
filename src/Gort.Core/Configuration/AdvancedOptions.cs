@@ -181,6 +181,35 @@ public sealed class AdvancedOptions
     public static AdvancedOptions Defaults() => new();
 
     /// <summary>
+    /// Cópia para edição.
+    ///
+    /// A janela de opções avançadas trabalha sobre uma cópia, e não sobre o objeto vivo:
+    /// é o que dá sentido ao botão "aplicar" de RF-530 — fechar sem aplicar não muda nada,
+    /// e "restaurar padrões" continua reversível enquanto não se aplica.
+    /// </summary>
+    /// <summary>
+    /// Traz de volta os valores de uma cópia editada, PRESERVANDO A IDENTIDADE do objeto:
+    /// o programa inteiro segura a mesma referência (RF-032 — as opções avançadas são
+    /// globais), e trocá-la faria metade dele continuar lendo a antiga.
+    /// </summary>
+    public void CopyFrom(AdvancedOptions other)
+    {
+        foreach (var property in typeof(AdvancedOptions).GetProperties())
+        {
+            if (!property.CanRead || !property.CanWrite) continue;
+            property.SetValue(this, property.GetValue(other));
+        }
+        CollectionFiles = new List<string>(other.CollectionFiles);
+    }
+
+    public AdvancedOptions CloneForEditing()
+    {
+        var copy = (AdvancedOptions)MemberwiseClone();
+        copy.CollectionFiles = new List<string>(CollectionFiles);
+        return copy;
+    }
+
+    /// <summary>
     /// RF-530 / RF-532 — Restaura os padrões.
     ///
     /// A direção do texto é DERIVADA da propriedade de direção do idioma de destino

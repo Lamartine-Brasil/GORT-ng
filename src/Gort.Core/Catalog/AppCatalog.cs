@@ -234,6 +234,7 @@ public sealed class AppCatalog
                     NameKey = GetString(item, "name_key") ?? $"svc.{key}",
                     NeedsNetwork = GetBool(item, "needs_network") ?? true,
                     UsesResultMemory = GetBool(item, "uses_result_memory") ?? true,
+                    ShortcutSwitchable = GetBool(item, "shortcut_switchable") ?? false,
                     SupportsBridge = GetBool(item, "supports_bridge") ?? false,
                     UsesCollection = GetBool(item, "uses_collection") ?? true,
                     SeparatorToken = GetString(item, "separator_token") ?? Calibration.P.SeparatorToken,

@@ -59,6 +59,27 @@ public class LocalizationCoverageTests
             + string.Join("\n  ", missing));
     }
 
+    /// <summary>
+    /// A varredura de literais não enxerga chaves montadas a partir de um enumerado —
+    /// `_loc[$"shortcut.{action}"]`. Este teste cobre justamente essas: toda ação de atalho
+    /// precisa de nome na tabela, ou a janela mostra "shortcut.OpenProfile".
+    ///
+    /// Foi assim que a falta apareceu: renderizando a aba de atalhos avançados.
+    /// </summary>
+    [Fact]
+    public void Toda_acao_de_atalho_tem_nome_na_tabela()
+    {
+        var table = Table();
+
+        var missing = Enum.GetValues<Gort.Core.Model.ShortcutAction>()
+            .Select(a => $"shortcut.{a}")
+            .Where(key => !table.Has(key))
+            .ToList();
+
+        Assert.True(missing.Count == 0,
+            "Ações de atalho sem nome na tabela:\n  " + string.Join("\n  ", missing));
+    }
+
     [Fact]
     public void A_varredura_encontra_as_chaves_de_verdade()
     {

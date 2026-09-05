@@ -22,9 +22,10 @@ Gort.sln
 │   ├── Gort.CaptureProbe/      teste visual das Etapas 2, 3 e 4
 │   ├── Gort.OcrProbe/          teste do motor de OCR (Etapa 5)
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
-│   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
+│   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
+│   └── Gort.OptionsProbe/      as sete abas de V.3, renderizadas fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        551 testes
+    ├── Gort.Core.Tests/        558 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -33,25 +34,23 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **Etapa 17b, primeira leva**. 644 testes passando (551 + 33 + 36 + 24).
+Último commit: **a janela de opções avançadas (V.3)**. 651 testes passando
+(558 + 33 + 36 + 24), as sete abas verificadas em imagem.
 
-**Próximo passo — o que falta da Etapa 17b**, na ordem de utilidade:
+**Próximo passo — as janelas auxiliares de V.4**, na ordem de utilidade:
 
-1. **Janela de opções avançadas (V.3)** — as abas que RF-523 a RF-532 descrevem. A LÓGICA
-   toda já está pronta e testada (dependências, presets, rótulos, restauração); falta a
-   janela que a apresenta.
-2. **Gerenciamento de áreas (RF-533)** e **grupos de cor por área (RF-534)**.
-3. **Conta-gotas (RF-535)** e **pré-visualização binarizada (RF-536)** — `Preprocessor.Preview`
-   já existe como função.
-4. **Editor de dicionário (RF-537)** — RF-181 já carrega e aplica o dicionário.
-5. **Gerenciamento de chaves (RF-538)**, **sobre (RF-543)** e **doação (RF-544)**.
+1. **Gerenciamento de áreas (RF-533)** e **grupos de cor por área (RF-534)**.
+2. **Conta-gotas (RF-535)** e **pré-visualização binarizada (RF-536)** —
+   `Preprocessor.Preview` já existe como função.
+3. **Editor de dicionário (RF-537)** — RF-181 já carrega e aplica o dicionário.
+4. **Gerenciamento de chaves (RF-538)**, **sobre (RF-543)** e **doação (RF-544)**.
 
 Dependem de coisas que não existem aqui: RF-539 (OCR de nuvem), RF-540 (instalador do motor
 por ambiente interpretado), RF-541 (servidor da comunidade) e RF-542 (navegador embutido).
 
-Depois disso, a **Etapa 19** — endurecimento, RF-552 a RF-567, e toda a PARTE VIII. A
-**Etapa 15** (nove serviços de tradução) e a atualização automática de RF-416 a RF-435
-dependem de credenciais e de um servidor de distribuição.
+Depois, a **Etapa 19** — endurecimento, RF-552 a RF-567, e toda a PARTE VIII. A **Etapa 15**
+(nove serviços de tradução) e a atualização automática de RF-416 a RF-435 dependem de
+credenciais e de um servidor de distribuição.
 
 ## Etapas concluídas
 
@@ -77,7 +76,7 @@ dependem de credenciais e de um servidor de distribuição.
 | **— Cache e fontes locais** | RF-206 a RF-224, RF-241 a RF-243 | **Completa.** |
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
-| **17b — Opções avançadas: a lógica** | RF-302 a RF-307, RF-523 a RF-532, RF-545, RF-546 | **A lógica está completa e testada**, e o menu de contexto do modo camada, no ar. Falta a janela de V.3 e as auxiliares de V.4. |
+| **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. Faltam as janelas auxiliares de V.4. |
 
 Também prontos, transversais a tudo:
 
@@ -402,6 +401,19 @@ fora dela — é onde moram as decisões difíceis do capítulo:
   de guardar cópia: como o efeito é imediato, outra parte do programa pode ter mudado a
   mesma opção desde a última vez que ele abriu.
 
+## A janela de opções avançadas
+
+Sete abas, verificadas por `tools/Gort.OptionsProbe`, que monta a janela FORA DA TELA e grava
+cada aba em PNG. A janela é revelada por um botão e conferi-la a olho exigiria clicar nele —
+o que nesta máquina esbarra na permissão de Acessibilidade ausente. A sonda contorna isso e,
+de quebra, imprime o estado das regras que uma imagem não mostra: RF-523, RF-525, RF-526 e
+RF-529.
+
+Foi ela que achou duas faltas de verdade: as chaves `shortcut.OpenProfile`,
+`shortcut.ToggleForcedTransparency` e `shortcut.SwitchTranslationService` não existiam na
+tabela — a aba mostrava os nomes das chaves —, e os nomes dos motores, serviços e idiomas do
+catálogo também não. Ambas viraram testes.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -517,6 +529,24 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     o teste do arquivo ilegível pegou isso. O carregador agora usa a forma que informa se
     houve recuperação, e transforma o arquivo ilegível num aviso. A tolerância continua
     onde ela serve: um arquivo ruim não impede os outros.
+
+21. **A janela edita uma cópia.** As opções avançadas são globais (RF-032) e o programa
+    inteiro segura a mesma referência. A janela trabalha sobre `CloneForEditing()` e devolve
+    os valores com `CopyFrom`, que preserva a IDENTIDADE do objeto: trocá-la faria metade do
+    programa continuar lendo a antiga. É também o que dá sentido ao botão "aplicar" de
+    RF-530 — fechar sem aplicar não muda nada, e "restaurar padrões" continua reversível
+    enquanto não se aplica.
+
+22. **Quais serviços têm atalho de troca é dado.** RF-447 nomeia sete, mas o catálogo tem
+    dez entradas. Um número solto no código envelheceria em silêncio na primeira vez que um
+    serviço fosse acrescentado; a marca `shortcut_switchable` em `data/engines.toml` é quem
+    decide, e um teste confere que são exatamente sete.
+
+23. **Um controle com modelo não desenha solto.** `TabControl`, `CheckBox` e `Slider` só
+    materializam o visual quando pertencem a uma janela apresentada; medir e desenhar o
+    painel isolado devolve uma imagem em branco — foi o que a primeira versão da sonda
+    produziu. A plataforma "headless" com Skia dá o que falta: uma janela de verdade, sem
+    tela, cujo quadro se captura com `CaptureRenderedFrame`.
 
 ## Como rodar os testes
 

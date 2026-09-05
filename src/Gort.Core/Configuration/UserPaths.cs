@@ -51,6 +51,9 @@ public sealed class UserPaths
     /// <summary>RF-302 — Pasta dos arquivos individuais de preset de API personalizada.</summary>
     public string ApiPresetsDirectory => Ensure(Path.Combine(Root, "presets"));
 
+    /// <summary>RF-302 — A lista editável de presets, num arquivo próprio.</summary>
+    public string ApiPresetsFile => Path.Combine(Root, "presets.toml");
+
     /// <summary>RF-492 — Pasta dedicada aos retratos de análise.</summary>
     public string DiagnosticsDirectory => Ensure(Path.Combine(Root, "diagnostico"));
 

@@ -1,0 +1,284 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Gort.App.Windows.AdvancedOptionsWindow"
+        Width="720" Height="620"
+        Background="#F4F4F6"
+        RequestedThemeVariant="Light"
+        WindowStartupLocation="CenterOwner">
+
+  <!-- V.3 — sete abas. RF-530: aplicar grava tudo e reaplica; restaurar padrões confirma. -->
+  <DockPanel Margin="14">
+
+    <TextBlock x:Name="TitleText" DockPanel.Dock="Top" FontSize="17" FontWeight="SemiBold"
+               Margin="0,0,0,10" />
+
+    <Border DockPanel.Dock="Bottom" Padding="0,12,0,0">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <Button x:Name="ApplyButton" Padding="20,8" />
+        <Button x:Name="RestoreButton" Padding="14,8" />
+        <Button x:Name="CloseButton" Padding="14,8" />
+        <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#606060"
+                   FontSize="12" />
+      </StackPanel>
+    </Border>
+
+    <TabControl x:Name="Tabs">
+
+      <!-- ── Aba 1 — aplicativo ──────────────────────────────────────────── -->
+      <TabItem x:Name="TabApp">
+        <ScrollViewer>
+          <StackPanel Spacing="8" Margin="4,10">
+            <TextBlock x:Name="AppGeneralLabel" FontWeight="SemiBold" />
+            <CheckBox x:Name="TrayModeCheck" />
+            <CheckBox x:Name="RightToLeftCheck" />
+            <CheckBox x:Name="RemoteAlwaysOnTopCheck" />
+
+            <TextBlock x:Name="MouseFollowLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <CheckBox x:Name="MouseCompatibleCheck" />
+            <CheckBox x:Name="MouseOnlyCheck" />
+
+            <TextBlock x:Name="WindowCaptureLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <CheckBox x:Name="CaptureBorderCheck" />
+
+            <TextBlock x:Name="SelectionColorsLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <Grid ColumnDefinitions="Auto,Auto,20,Auto,Auto" RowDefinitions="Auto"
+                  ColumnSpacing="8">
+              <TextBlock Grid.Column="0" x:Name="SelectionBackgroundLabel"
+                         VerticalAlignment="Center" />
+              <Border Grid.Column="1" x:Name="SelectionBackgroundSample" Width="52" Height="24"
+                      BorderBrush="#909090" BorderThickness="1" Cursor="Hand" />
+              <TextBlock Grid.Column="3" x:Name="SelectionHighlightLabel"
+                         VerticalAlignment="Center" />
+              <Border Grid.Column="4" x:Name="SelectionHighlightSample" Width="52" Height="24"
+                      BorderBrush="#909090" BorderThickness="1" Cursor="Hand" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button x:Name="SelectionPreviewButton" Padding="12,6" />
+              <Button x:Name="SelectionRestoreButton" Padding="12,6" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ── Aba 2 — atalhos avançados ───────────────────────────────────── -->
+      <TabItem x:Name="TabShortcuts">
+        <ScrollViewer>
+          <StackPanel x:Name="ShortcutPanel" Spacing="8" Margin="4,10" />
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ── Aba 3 — janela de tradução ──────────────────────────────────── -->
+      <TabItem x:Name="TabWindow">
+        <ScrollViewer>
+          <StackPanel Spacing="8" Margin="4,10">
+            <TextBlock x:Name="OverlayLabel" FontWeight="SemiBold" />
+            <CheckBox x:Name="AutoFontSizeCheck" />
+            <CheckBox x:Name="MergeLinesCheck" />
+            <CheckBox x:Name="PreserveOrientationCheck" />
+            <CheckBox x:Name="FontStrokeCheck" />
+            <CheckBox x:Name="BackgroundTransparencyCheck" />
+
+            <!-- RF-523 — o grupo aninhado depende da caixa mestre. -->
+            <CheckBox x:Name="AutoColorCheck" />
+            <StackPanel x:Name="AutoColorGroup" Margin="22,0,0,0" Spacing="6">
+              <CheckBox x:Name="AutoFontColorCheck" />
+              <CheckBox x:Name="AutoBackgroundColorCheck" />
+            </StackPanel>
+
+            <!-- RF-524 — um nunca passa do outro. -->
+            <Grid ColumnDefinitions="Auto,Auto,20,Auto,Auto" ColumnSpacing="8" Margin="0,6,0,0">
+              <TextBlock Grid.Column="0" x:Name="MinSizeLabel" VerticalAlignment="Center" />
+              <NumericUpDown Grid.Column="1" x:Name="MinSizeBox" Width="100"
+                             Minimum="1" Maximum="400" Increment="1" FormatString="0" />
+              <TextBlock Grid.Column="3" x:Name="MaxSizeLabel" VerticalAlignment="Center" />
+              <NumericUpDown Grid.Column="4" x:Name="MaxSizeBox" Width="100"
+                             Minimum="1" Maximum="400" Increment="1" FormatString="0" />
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock x:Name="SnapshotHoldLabel" VerticalAlignment="Center" />
+              <NumericUpDown x:Name="SnapshotHoldBox" Width="100"
+                             Minimum="0" Maximum="600" Increment="1" FormatString="0" />
+            </StackPanel>
+
+            <TextBlock x:Name="DarkLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <ComboBox x:Name="DarkFontBox" Width="240" />
+              <Button x:Name="DarkFontClearButton" Padding="10,5" />
+            </StackPanel>
+
+            <TextBlock x:Name="LayerLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <CheckBox x:Name="LayerBottomCheck" />
+            <CheckBox x:Name="LayerRightCheck" />
+
+            <TextBlock x:Name="WindowGeneralLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <CheckBox x:Name="TopOnlyWhileTranslatingCheck" />
+            <CheckBox x:Name="IgnoreEmptyCheck" />
+            <CheckBox x:Name="HideAlsoTranslatesCheck" />
+
+            <TextBlock x:Name="DisplayMemoryLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <CheckBox x:Name="DisplayMemoryCheck" />
+            <StackPanel x:Name="DisplayMemoryGroup" Orientation="Horizontal" Spacing="8"
+                        Margin="22,0,0,0">
+              <TextBlock x:Name="DisplayMemoryCountLabel" VerticalAlignment="Center" />
+              <NumericUpDown x:Name="DisplayMemoryCountBox" Width="90" Minimum="0"
+                             Maximum="100" Increment="1" FormatString="0" />
+              <TextBlock x:Name="DisplayMemoryTimeLabel" VerticalAlignment="Center" />
+              <NumericUpDown x:Name="DisplayMemoryTimeBox" Width="90" Minimum="0"
+                             Maximum="3600" Increment="1" FormatString="0" />
+            </StackPanel>
+            <TextBlock x:Name="DisplayMemoryHelp" Foreground="#606060" FontSize="12"
+                       TextWrapping="Wrap" Margin="22,0,0,0" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ── Aba 4 — coletânea de tradução ───────────────────────────────── -->
+      <TabItem x:Name="TabCollection">
+        <Grid RowDefinitions="Auto,*,Auto,Auto,Auto" Margin="4,10">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+            <Button x:Name="CollectionCheckAll" Padding="10,5" />
+            <Button x:Name="CollectionUncheckAll" Padding="10,5" />
+            <Button x:Name="CollectionRefresh" Padding="10,5" />
+          </StackPanel>
+
+          <ListBox Grid.Row="1" x:Name="CollectionList" SelectionMode="Single" />
+
+          <TextBlock Grid.Row="2" x:Name="CollectionInfo" Foreground="#606060" FontSize="12"
+                     TextWrapping="Wrap" Margin="0,8,0,0" />
+
+          <CheckBox Grid.Row="3" x:Name="CollectionDatabaseCheck" Margin="0,8,0,0" />
+
+          <!-- Grupo dependente: só habilitado no modo banco de dados. -->
+          <StackPanel Grid.Row="4" x:Name="CollectionDatabaseGroup" Margin="22,0,0,0">
+            <CheckBox x:Name="CollectionIgnoreCaseCheck" />
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- ── Aba 5 — tradução ────────────────────────────────────────────── -->
+      <TabItem x:Name="TabTranslation">
+        <ScrollViewer>
+          <StackPanel Spacing="8" Margin="4,10">
+            <CheckBox x:Name="BridgeCheck" />
+            <CheckBox x:Name="FallbackCheck" />
+
+            <!-- API personalizada: RF-527 a RF-529. -->
+            <TextBlock x:Name="ApiLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <Grid ColumnDefinitions="220,*" ColumnSpacing="10" Height="190">
+              <DockPanel Grid.Column="0">
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
+                            Margin="0,6,0,0">
+                  <Button x:Name="ApiAddButton" Padding="10,5" />
+                  <Button x:Name="ApiRemoveButton" Padding="10,5" />
+                </StackPanel>
+                <ListBox x:Name="ApiList" SelectionMode="Single" />
+              </DockPanel>
+
+              <ScrollViewer Grid.Column="1">
+                <StackPanel Spacing="6">
+                  <TextBox x:Name="ApiNameBox" Watermark="nome" />
+                  <TextBox x:Name="ApiUrlBox" Watermark="url" />
+                  <TextBox x:Name="ApiHeadersBox" Watermark="cabeçalhos" AcceptsReturn="True"
+                           Height="52" TextWrapping="NoWrap" />
+                  <TextBox x:Name="ApiRequestBox" Watermark="requisição" AcceptsReturn="True"
+                           Height="60" TextWrapping="NoWrap" />
+                  <TextBox x:Name="ApiResponseBox" Watermark="resposta" />
+                  <CheckBox x:Name="ApiSameCodesCheck" />
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBox x:Name="ApiSourceBox" Width="110" Watermark="origem" />
+                    <TextBox x:Name="ApiTargetBox" Width="110" Watermark="destino" />
+                  </StackPanel>
+                </StackPanel>
+              </ScrollViewer>
+            </Grid>
+
+            <!-- Modelo de linguagem: RF-525, RF-526. -->
+            <TextBlock x:Name="LlmLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <TextBox x:Name="LlmInstructionBox" AcceptsReturn="True" Height="54"
+                     TextWrapping="Wrap" />
+            <TextBox x:Name="LlmModelBox" />
+            <CheckBox x:Name="LlmNoDefaultInstructionCheck" />
+
+            <StackPanel Orientation="Horizontal" Spacing="14">
+              <RadioButton x:Name="LlmStandardRadio" GroupName="llm" />
+              <RadioButton x:Name="LlmEconomyRadio" GroupName="llm" />
+              <RadioButton x:Name="LlmCustomRadio" GroupName="llm" />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="150,*,70" RowDefinitions="Auto,Auto,Auto"
+                  ColumnSpacing="8" RowSpacing="4">
+              <TextBlock Grid.Row="0" Grid.Column="0" x:Name="LlmTemperatureLabel"
+                         VerticalAlignment="Center" />
+              <Slider Grid.Row="0" Grid.Column="1" x:Name="LlmTemperatureSlider"
+                      Minimum="0" Maximum="100" />
+              <TextBlock Grid.Row="0" Grid.Column="2" x:Name="LlmTemperatureValue"
+                         VerticalAlignment="Center" />
+
+              <TextBlock Grid.Row="1" Grid.Column="0" x:Name="LlmThinkingLabel"
+                         VerticalAlignment="Center" />
+              <Slider Grid.Row="1" Grid.Column="1" x:Name="LlmThinkingSlider"
+                      Minimum="0" Maximum="3" TickFrequency="1" IsSnapToTickEnabled="True" />
+              <TextBlock Grid.Row="1" Grid.Column="2" x:Name="LlmThinkingValue"
+                         VerticalAlignment="Center" />
+
+              <TextBlock Grid.Row="2" Grid.Column="0" x:Name="LlmMaxOutputLabel"
+                         VerticalAlignment="Center" />
+              <Slider Grid.Row="2" Grid.Column="1" x:Name="LlmMaxOutputSlider"
+                      Minimum="500" Maximum="10000" TickFrequency="100"
+                      IsSnapToTickEnabled="True" />
+              <TextBlock Grid.Row="2" Grid.Column="2" x:Name="LlmMaxOutputValue"
+                         VerticalAlignment="Center" />
+            </Grid>
+
+            <TextBlock x:Name="ClipboardLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <CheckBox x:Name="ClipboardTranslationCheck" />
+            <CheckBox x:Name="ClipboardShowOriginalCheck" />
+            <CheckBox x:Name="ClipboardShowTranslatingCheck" />
+
+            <TextBlock x:Name="ClipboardWriteLabel" FontWeight="SemiBold" Margin="0,10,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="14">
+              <RadioButton x:Name="ClipboardFormatTranslated" GroupName="clipfmt" />
+              <RadioButton x:Name="ClipboardFormatBoth" GroupName="clipfmt" />
+              <RadioButton x:Name="ClipboardFormatRecognized" GroupName="clipfmt" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ── Aba 6 — OCR ─────────────────────────────────────────────────── -->
+      <TabItem x:Name="TabOcr">
+        <ScrollViewer>
+          <StackPanel Spacing="8" Margin="4,10">
+            <CheckBox x:Name="PreferCloudOneShotCheck" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock x:Name="CloudLimitLabel" VerticalAlignment="Center" />
+              <NumericUpDown x:Name="CloudLimitBox" Width="120" Minimum="0" Maximum="1000000"
+                             Increment="100" FormatString="0" />
+            </StackPanel>
+            <TextBlock x:Name="OcrHelp1" Foreground="#606060" FontSize="12" TextWrapping="Wrap"
+                       Margin="0,8,0,0" />
+            <TextBlock x:Name="OcrHelp2" Foreground="#606060" FontSize="12" TextWrapping="Wrap" />
+            <TextBlock x:Name="OcrHelp3" Foreground="#606060" FontSize="12" TextWrapping="Wrap" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ── Aba 7 — dicionário ──────────────────────────────────────────── -->
+      <TabItem x:Name="TabDictionary">
+        <ScrollViewer>
+          <StackPanel Spacing="8" Margin="4,10">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock x:Name="DictionaryPassesLabel" VerticalAlignment="Center" />
+              <NumericUpDown x:Name="DictionaryPassesBox" Width="100" Minimum="0" Maximum="10"
+                             Increment="1" FormatString="0" />
+            </StackPanel>
+            <TextBlock x:Name="DictionaryHelp" Foreground="#606060" FontSize="12"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</Window>

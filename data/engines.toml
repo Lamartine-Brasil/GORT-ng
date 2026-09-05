@@ -95,6 +95,7 @@ default_translation_service = "webfree"
 
 [[translation_service]]
 key = "localdb"
+shortcut_switchable = true
 name_key = "svc.localdb"
 needs_network = false
 uses_result_memory = false     # RF-214
@@ -103,6 +104,7 @@ uses_collection = false        # RF-221 — seria consulta duplicada
 
 [[translation_service]]
 key = "webfree"
+shortcut_switchable = true
 name_key = "svc.webfree"
 needs_network = true
 uses_result_memory = true
@@ -112,6 +114,7 @@ separator_token = "//////"     # P-51
 
 [[translation_service]]
 key = "commercial_kr"
+shortcut_switchable = true
 name_key = "svc.commercial_kr"
 needs_network = true
 uses_result_memory = true
@@ -122,6 +125,7 @@ multiple_keys = true           # RF-250
 
 [[translation_service]]
 key = "webfree_kr"
+shortcut_switchable = true
 name_key = "svc.webfree_kr"
 needs_network = true
 uses_result_memory = true
@@ -131,6 +135,7 @@ separator_token = "//////"     # P-51
 
 [[translation_service]]
 key = "spreadsheet"
+shortcut_switchable = true
 name_key = "svc.spreadsheet"
 needs_network = true
 uses_result_memory = true
@@ -140,6 +145,7 @@ separator_token = "//////"     # P-51
 
 [[translation_service]]
 key = "browser"
+shortcut_switchable = true
 name_key = "svc.browser"
 needs_network = true
 uses_result_memory = true
@@ -170,6 +176,7 @@ secondary = true
 
 [[translation_service]]
 key = "localproc"
+shortcut_switchable = true
 name_key = "svc.localproc"
 needs_network = false
 uses_result_memory = false     # RF-214

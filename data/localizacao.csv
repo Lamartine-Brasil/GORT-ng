@@ -184,3 +184,130 @@ layer.menu.order_center,Ordenação: centralizado
 layer.menu.remove_spaces,Remover espaços
 layer.menu.forced_transparency,Transparência forçada
 layer.menu.close,Fechar
+
+# ─── V.3 — janela de opções avançadas (RF-523 a RF-532) ──────────────────────
+advanced.title,Opções avançadas
+advanced.tab.app,Aplicativo
+advanced.tab.shortcuts,Atalhos avançados
+advanced.tab.window,Janela de tradução
+advanced.tab.collection,Coletânea de tradução
+advanced.tab.translation,Tradução
+advanced.tab.ocr,OCR
+advanced.tab.dictionary,Dicionário
+advanced.apply,Aplicar
+advanced.restore,Restaurar padrões
+advanced.close,Fechar
+advanced.restore_confirm,"Restaurar todos os padrões? As opções avançadas atuais serão perdidas."
+advanced.applied,Opções aplicadas.
+advanced.restored,"Padrões restaurados. Use aplicar para gravá-los."
+
+app.general,Geral
+app.tray_mode,Modo bandeja
+app.right_to_left,Texto da direita para a esquerda
+app.remote_always_on_top,Controle remoto sempre no topo
+app.mouse_follow,Área que segue o mouse
+app.mouse_compatible,Modo compatível
+app.mouse_only,Usar somente essa área
+app.window_capture,Captura de janela
+app.capture_border,Borda amarela na janela capturada
+app.selection_colors,Cores da seleção de área
+app.selection_background,Fundo
+app.selection_highlight,Destaque
+app.selection_preview,Pré-visualizar
+app.selection_restore,Restaurar cores
+
+window.overlay,Sobreposição
+window.auto_font_size,Tamanho automático de fonte
+window.merge_lines,Fusão automática de blocos
+window.preserve_orientation,Preservar direção do original
+window.font_stroke,Usar contorno de fonte
+window.background_transparency,Usar transparência do fundo
+window.auto_color,Cor automática
+window.auto_font_color,Cor de fonte automática
+window.auto_background_color,Cor de fundo automática
+window.min_size,Tamanho mínimo
+window.max_size,Tamanho máximo
+window.snapshot_hold,Permanência do instantâneo (s)
+window.dark,Modo escuro
+window.dark_font,Fonte do modo escuro
+window.dark_font_clear,Usar a fonte padrão
+window.layer,Modo camada
+window.layer_bottom,Alinhamento inferior
+window.layer_right,Alinhamento à direita
+window.general,Geral
+window.top_only_translating,Sempre no topo só durante a tradução
+window.ignore_empty,Ignorar tradução vazia
+window.hide_also_translates,O atalho de ocultar também traduz
+window.display_memory,Memória de exibição
+window.display_memory_enable,Ativar
+window.display_memory_count,Quantidade
+window.display_memory_time,Tempo (s)
+window.display_memory_help,"Guarda as últimas traduções e as reexibe quando o mesmo texto reaparece, evitando que a tela pisque entre quadros iguais."
+
+collection.check_all,Marcar todos
+collection.uncheck_all,Desmarcar todos
+collection.refresh,Reler a pasta
+collection.database_mode,Modo banco de dados
+collection.ignore_case,Ignorar maiúsculas/minúsculas
+collection.empty,"Nenhum arquivo na pasta da coletânea."
+collection.info,"{0} — {1} pares"
+collection.info_unreadable,"{0} — ilegível"
+
+translation.bridge,Tradução ponte
+translation.fallback,Tradutor alternativo em caso de erro
+translation.api,API personalizada
+translation.api_add,Adicionar
+translation.api_remove,Remover
+translation.api_same_codes,Usar os mesmos códigos de idioma do tradutor web
+translation.llm,Modelo de linguagem
+translation.llm_instruction,Instrução
+translation.llm_model,Modelo personalizado
+translation.llm_no_default,Não enviar a instrução padrão
+translation.llm_standard,Padrão
+translation.llm_economy,Econômico
+translation.llm_custom,Personalizado
+translation.llm_temperature,Temperatura
+translation.llm_thinking,Nível de raciocínio
+translation.llm_max_output,Limite de saída
+translation.clipboard,Área de transferência
+translation.clipboard_use,Usar tradução da área de transferência
+translation.clipboard_original,Exibir original
+translation.clipboard_translating,"Exibir ""traduzindo"""
+translation.clipboard_write,Gravação na área de transferência
+translation.clipboard_translated_only,Só a tradução
+translation.clipboard_both,Original e tradução
+translation.clipboard_recognized_only,Só o texto reconhecido
+
+ocr.prefer_cloud_one_shot,Priorizar OCR de nuvem em modo pontual
+ocr.cloud_limit,Limite mensal
+ocr.help1,"O OCR de nuvem acerta mais em texto pequeno ou estilizado, mas cada chamada custa e depende da rede."
+ocr.help2,"Em modo pontual a latência não importa, então é onde a troca compensa: uma chamada por vez, quando você pede."
+ocr.help3,"O limite mensal é seu, não do serviço: ao alcançá-lo o programa volta ao motor local em vez de continuar cobrando."
+
+dictionary.passes,Passagens adicionais
+dictionary.help,"Cada passagem adicional reaplica o dicionário ao texto já corrigido. Serve para correções encadeadas, em que o resultado de uma vira a entrada de outra."
+other.advanced,Abrir opções avançadas…
+
+# ─── Nomes dos motores de OCR e dos serviços de tradução ─────────────────────
+# RF-481 / RF-485 — o catálogo guarda a CHAVE do nome; o nome exibido está aqui.
+ocr.classic,OCR clássico
+ocr.system,OCR do sistema
+ocr.modern,OCR moderno
+ocr.cloud,OCR de nuvem
+ocr.interpreted,OCR por ambiente interpretado
+svc.localdb,Banco de dados local
+svc.webfree,Tradutor web gratuito
+svc.commercial_kr,Tradutor comercial por chave
+svc.webfree_kr,Tradutor web sem chave
+svc.spreadsheet,Planilha em nuvem
+svc.browser,Tradutor por navegador embutido
+svc.commercial_eu,Tradutor comercial europeu
+svc.llm,Modelo de linguagem
+svc.localproc,Tradutor local por processo auxiliar
+svc.customapi,API personalizada
+lang.en,Inglês
+lang.ja,Japonês
+lang.pt-BR,Português (Brasil)
+shortcut.OpenProfile,Abrir perfil
+shortcut.ToggleForcedTransparency,Alternar transparência forçada
+shortcut.SwitchTranslationService,Trocar serviço

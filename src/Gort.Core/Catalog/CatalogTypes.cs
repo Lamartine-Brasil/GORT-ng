@@ -89,6 +89,16 @@ public sealed class TranslationServiceInfo
     public bool MultipleKeys { get; init; }
 
     /// <summary>
+    /// RF-447 — Serviço que tem bloco próprio de atalho de troca na aba de atalhos
+    /// avançados.
+    ///
+    /// Quais são eles é DADO, não código (RF-029): a especificação nomeia sete, mas o
+    /// catálogo tem mais entradas, e um número solto aqui envelheceria em silêncio na
+    /// primeira vez que um serviço fosse acrescentado.
+    /// </summary>
+    public bool ShortcutSwitchable { get; init; }
+
+    /// <summary>
     /// RF-226 — Recurso secundário: nunca é o padrão, nunca é pré-selecionado, e nenhuma
     /// outra parte do programa pode depender dele para funcionar.
     /// </summary>

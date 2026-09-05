@@ -162,6 +162,7 @@ public partial class MainWindow : Window
         SpeakWaitCheck.Content = _loc["translation.speak_wait"];
 
         ShortcutsLabel.Text = _loc["other.shortcuts"];
+        AdvancedButton.Content = _loc["other.advanced"];
         HelpLabel.Text = _loc["other.help"];
         ManualButton.Content = _loc["other.manual"];
         KnownErrorsButton.Content = _loc["other.known_errors"];
@@ -311,6 +312,75 @@ public partial class MainWindow : Window
         };
 
         WireDebugOptions();
+
+        AdvancedButton.Click += (_, _) => OpenAdvancedOptions();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // V.3 — Janela de opções avançadas
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private AdvancedOptionsWindow? _advancedWindow;
+
+    /// <summary>
+    /// V.3 — Uma instância só. Reabrir com a janela já aberta a traz para a frente em vez
+    /// de criar uma segunda, que teria a sua própria cópia das opções e desfaria a da
+    /// primeira ao aplicar.
+    /// </summary>
+    private void OpenAdvancedOptions()
+    {
+        if (_advancedWindow is not null) { _advancedWindow.Activate(); return; }
+
+        var window = new AdvancedOptionsWindow(
+            _loc, _session.Advanced, _session.Profile.CopyFormat,
+            _session.Shortcuts, _session.Dispatcher, _session.ApiPresets,
+            _session.Paths.CollectionDirectory,
+            () => FontManager.Current.SystemFonts.Select(f => f.Name).OrderBy(n => n),
+            _session.Catalog.Language(_session.Profile.TargetLanguage),
+            _session.Catalog.TranslationServices.Where(s => s.ShortcutSwitchable))
+        {
+            Applied = ApplyAdvancedOptions,
+        };
+
+        _advancedWindow = window;
+        window.Closed += (_, _) => _advancedWindow = null;
+        window.Show(this);
+    }
+
+    /// <summary>
+    /// RF-530 / RF-531 — Aplicar grava tudo e reaplica ao programa SEM REINICIAR.
+    ///
+    /// RF-012 — a aplicação passa pelo protocolo de pausa: o laço para, a mudança acontece
+    /// e ele é retomado. Se a thread não parar no prazo, NADA é aplicado e o usuário é
+    /// avisado — é a única forma de não ter um ciclo lendo configuração pela metade.
+    /// </summary>
+    private void ApplyAdvancedOptions(
+        Gort.Core.Configuration.AdvancedOptions options,
+        Gort.Core.Configuration.ClipboardCopyFormat copyFormat)
+    {
+        var result = _loop.PauseAndResume(() =>
+        {
+            _session.Advanced.CopyFrom(options);
+            _session.Profile.CopyFormat = copyFormat;
+
+            _session.SaveAdvanced();
+            _session.SaveShortcuts();
+            _session.ApiPresets.Save(_session.Paths.ApiPresetsFile);
+
+            // RF-531 — tudo o que a aplicação precisa reconfigurar, sem reiniciar.
+            _session.ApplyConfiguration();
+        });
+
+        if (result == ApplyResult.Aborted) { Say("msg.loop_stop_failed"); return; }
+
+        // O que depende de janelas vivas é reaplicado aqui, fora da pausa.
+        _remote?.SetAlwaysOnTop(_session.Advanced.RemoteAlwaysOnTop);
+        _displayMemory.Enabled = _session.Advanced.DisplayMemoryEnabled;
+        _displayMemory.Capacity = _session.Advanced.DisplayMemoryCount;
+        _displayMemory.LifetimeSeconds = _session.Advanced.DisplayMemoryLifetimeSeconds;
+
+        LoadValues();
+        UpdatePreview();
     }
 
     // ─────────────────────────────────────────────────────────────────────────

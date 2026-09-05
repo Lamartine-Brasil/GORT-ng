@@ -10,6 +10,7 @@ using Gort.Core.Regions;
 using Gort.Core.Shortcuts;
 using Gort.Core.Structuring;
 using Gort.Core.Translation;
+using Gort.Core.Translation.Presets;
 using Gort.Core.Translation.Services;
 using Gort.Engine;
 using Gort.Ocr.Rapid;
@@ -52,6 +53,9 @@ public sealed class AppSession : IDisposable
 
         // RF-481 a RF-489 — a tabela de localização é um arquivo de dados externo.
         Localizer = Localizer.Load(Path.Combine(DataDirectory, "localizacao.csv"));
+
+        ApiPresets = ApiPresetStore.Load(paths.ApiPresetsFile, paths.ApiPresetsDirectory);
+        Notices.AddRange(ApiPresets.Notices);
 
         Diagnostics = new DiagnosticRecorder(paths.DiagnosticsDirectory);
         ResultFile = new ResultFileWriter(
@@ -116,6 +120,9 @@ public sealed class AppSession : IDisposable
 
     /// <summary>RF-496 — Gravação do resultado no formato do banco de dados.</summary>
     public ResultFileWriter ResultFile { get; private set; } = null!;
+
+    /// <summary>RF-302 — Presets de API personalizada, das duas fontes.</summary>
+    public ApiPresetStore ApiPresets { get; private set; } = null!;
 
     public static AppSession Create(string? dataDirectory = null, string? userRoot = null)
     {
@@ -312,6 +319,9 @@ public sealed class AppSession : IDisposable
 
     /// <summary>RF-453 — Os atalhos são gravados no seu arquivo ao aplicar (RF-012).</summary>
     public void SaveShortcuts() => ShortcutStore.Save(Paths.Shortcuts, Shortcuts);
+
+    /// <summary>RF-031 / RF-530 — As opções avançadas, no seu arquivo global.</summary>
+    public void SaveAdvanced() => Advanced.Save(Paths.AdvancedOptions);
 
     /// <summary>RF-020 — O perfil principal é salvo sempre que o usuário aplica configurações.</summary>
     public void SaveProfile()
