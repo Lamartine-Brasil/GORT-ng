@@ -39,6 +39,23 @@ public sealed class TranslationCollection
     public bool DatabaseModeAvailable { get; set; } = true;
 
     public int Count => _all.Count;
+
+    /// <summary>
+    /// RF-559 — Bytes aproximados dos pares carregados, para o detalhamento do indicador de
+    /// memória. Aproximado de propósito: dois bytes por caractere mais o cabeçalho de cada
+    /// cadeia é o que a plataforma cobra, e percorrer a estrutura para medir com precisão
+    /// custaria mais que a informação vale (RF-560).
+    /// </summary>
+    public long ApproximateByteCount
+    {
+        get
+        {
+            long total = 0;
+            foreach (var pair in _all)
+                total += (pair.Source.Length + pair.Target.Length) * 2L + 64;
+            return total;
+        }
+    }
     public IReadOnlyList<TranslationPair> Pairs => _all;
 
     /// <summary>

@@ -66,11 +66,25 @@ public partial class MainWindow : Window
         Tabs.SelectedIndex = _session.Options.StartOnBasicTab ? 0 : 5;
 
         // RF-560 — o indicador de memória é amostrado em intervalo fixo e NUNCA dentro do
-        // ciclo de tradução.
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-        timer.Tick += (_, _) => ShowMemory();
-        timer.Start();
+        // ciclo de tradução. O mesmo tique confere a disposição dos monitores (RF-086): são
+        // duas leituras baratas, e um segundo temporizador só para isso custaria o dobro
+        // por nada.
+        //
+        // RF-552 — em ociosidade não deve haver temporizador ativo além do da área que
+        // segue o mouse. Este só corre enquanto a JANELA ESTÁ VISÍVEL: escondida, não há
+        // indicador para atualizar, e o usuário que escondeu a janela é justamente o que
+        // está jogando.
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _statusTimer.Tick += (_, _) => { ShowMemory(); CheckMonitorLayout(); };
+
+        IsVisibleChanged();
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == IsVisibleProperty) IsVisibleChanged();
+        };
+
         ShowMemory();
+        RememberMonitorLayout();
 
         StartMouseFollow();
     }
@@ -418,9 +432,17 @@ public partial class MainWindow : Window
         // RF-492 — a pasta dos retratos, aberta no navegador de arquivos do sistema.
         DebugOpenFolder.Click += (_, _) => OpenExternal(_session.Paths.DiagnosticsDirectory);
 
+        // RF-552 — o temporizador dos contadores só corre com a aba de depuração à vista.
+        // Deixá-lo correndo e não fazer nada é um temporizador ativo do mesmo jeito.
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        timer.Tick += (_, _) => { if (TabDebug.IsVisible) ShowCounters(); };
-        timer.Start();
+        timer.Tick += (_, _) => ShowCounters();
+
+        TabDebug.PropertyChanged += (_, e) =>
+        {
+            if (e.Property != IsVisibleProperty) return;
+            if (TabDebug.IsVisible) { timer.Start(); ShowCounters(); }
+            else timer.Stop();
+        };
     }
 
     /// <summary>
@@ -960,11 +982,104 @@ public partial class MainWindow : Window
     /// </summary>
     private void ShowMemory()
     {
-        using var process = Process.GetCurrentProcess();
-        long bytes = process.WorkingSet64;
-        if (bytes <= 0) bytes = GC.GetTotalMemory(false);
+        var report = _session.MemorySnapshot(OverlayBitmapBytes());
+        MemoryIndicator.Text = _loc.Format("app.memory", report.ProcessBytes / 1024 / 1024);
 
-        MemoryIndicator.Text = _loc.Format("app.memory", bytes / 1024 / 1024);
+        // RF-559 — o detalhamento fica a um passe de mouse, sem abrir diálogo: só o total
+        // diz que há um problema, e o detalhamento diz qual configuração o causou.
+        ToolTip.SetTip(MemoryIndicator, string.Join('\n', new[]
+        {
+            _loc.Format("memory.regions", MemoryReport.Megabytes(report.RegionImageBytes)),
+            _loc.Format("memory.cache", MemoryReport.Megabytes(report.TranslationCacheBytes)),
+            _loc.Format("memory.overlay", MemoryReport.Megabytes(report.OverlayBitmapBytes)),
+        }));
+    }
+
+    /// <summary>RF-552 — O temporizador de estado só corre com a janela visível.</summary>
+    private DispatcherTimer? _statusTimer;
+
+    private void IsVisibleChanged()
+    {
+        if (_statusTimer is null) return;
+
+        if (IsVisible)
+        {
+            _statusTimer.Start();
+            ShowMemory();
+        }
+        else
+        {
+            _statusTimer.Stop();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RF-086 / RF-087 — Mudança de monitor
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Assinatura da disposição atual, para reconhecer que ela mudou.</summary>
+    private string _monitorLayout = "";
+
+    /// <summary>Índices já avisados, para não repetir o aviso a cada dois segundos.</summary>
+    private string _warnedLayout = "";
+
+    private string LayoutSignature()
+    {
+        var monitors = _session.Platform.Monitors.Monitors;
+        return string.Join('|', monitors.Select(
+            m => $"{m.Bounds.X},{m.Bounds.Y},{m.Bounds.Width},{m.Bounds.Height},{m.Scale}"));
+    }
+
+    private void RememberMonitorLayout() => _monitorLayout = LayoutSignature();
+
+    /// <summary>
+    /// RF-086 — Se a resolução mudar, um monitor for removido ou a disposição for alterada
+    /// e alguma área ficar fora da área de trabalho, o programa AVISA e aponta quais.
+    ///
+    /// RF-087 — e oferece abrir o gerenciamento de áreas, com as molduras visíveis.
+    ///
+    /// Nenhuma área é reposicionada: o programa não tem como saber onde o conteúdo do jogo
+    /// foi parar, e mover a área produziria uma região errada em silêncio — o usuário só
+    /// descobriria pelo resultado da tradução.
+    /// </summary>
+    private void CheckMonitorLayout()
+    {
+        _session.Platform.Monitors.Refresh();
+
+        string signature = LayoutSignature();
+        if (signature == _monitorLayout) return;
+
+        _monitorLayout = signature;
+
+        var monitors = _session.Platform.Monitors.Monitors;
+        var areas = _session.Regions.Areas.Select(a => a.FrameRect).ToList();
+        var invalid = MonitorGeometry.InvalidAreas(monitors, areas);
+
+        if (invalid.Count == 0) { _warnedLayout = ""; return; }
+
+        // O aviso é por DISPOSIÇÃO, não por tique: sem isto ele se repetiria a cada dois
+        // segundos enquanto o usuário não corrigisse, e viraria ruído.
+        if (_warnedLayout == signature) return;
+        _warnedLayout = signature;
+
+        Say(_loc.Format("msg.areas_invalid",
+                        string.Join(", ", invalid.Select(i => i + 1))));
+
+        // RF-087 — o gerenciamento abre com as molduras visíveis, que é onde a correção
+        // acontece. Abrir direto poupa o usuário de procurar onde era.
+        OpenAreaManager();
+    }
+
+    /// <summary>
+    /// RF-559 — O mapa de bits da sobreposição. RF-556 — ele só é recriado quando as
+    /// dimensões da janela mudam, então o tamanho atual descreve o que está alocado.
+    /// </summary>
+    private long OverlayBitmapBytes()
+    {
+        if (_translationWindow is not OverlayWindow overlay) return 0;
+
+        return (long)Math.Max(0, overlay.Bounds.Width)
+             * (long)Math.Max(0, overlay.Bounds.Height) * 4;
     }
 
     private void Say(string keyOrText)

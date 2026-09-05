@@ -54,7 +54,16 @@ public sealed class CapturedRegion
     public required int Index { get; init; }
 
     /// <summary>Imagem bruta da região, antes do pré-processamento.</summary>
-    public required ImageBuffer Image { get; init; }
+    public required ImageBuffer Image { get; set; }
+
+    /// <summary>
+    /// RF-554 / RF-099 — Solta os pixels assim que a região não é mais necessária.
+    ///
+    /// Com ampliação, cada região ocupa dezenas de megabytes. Segurar todas até o fim do
+    /// ciclo faz o pico de memória crescer com o NÚMERO DE ÁREAS, e é justamente com muitas
+    /// áreas que o usuário está usando o programa no limite.
+    /// </summary>
+    public void Release() => Image = ImageBuffer.Allocate(0, 0, Image.Format);
 
     /// <summary>Retângulo efetivamente capturado, em coordenadas de tela.</summary>
     public required Rect ScreenRect { get; init; }

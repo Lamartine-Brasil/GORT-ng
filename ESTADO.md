@@ -26,7 +26,7 @@ Gort.sln
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
     ├── Gort.Core.Tests/        585 testes
-    ├── Gort.Platform.Tests/     33 testes
+    ├── Gort.Platform.Tests/     39 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
@@ -34,16 +34,21 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **chaves de tradução e a janela "sobre"** — a Etapa 17 fechou.
-678 testes passando (585 + 33 + 36 + 24).
+Último commit: **Etapa 19, primeira leva** — instância única, memória e mudança de monitor.
+688 testes passando (585 + 39 + 36 + 28).
 
-**Próximo passo: a Etapa 19 — endurecimento.** RF-552 a RF-567 e toda a PARTE VIII.
-É a última etapa da ordem de construção e a que fecha a especificação.
+**Próximo passo — o que resta da Etapa 19:**
 
-Continuam dependendo de coisas de fora: RF-539 (OCR de nuvem), RF-540 (instalador do motor
-por ambiente interpretado), RF-541 (servidor da comunidade), RF-542 (navegador embutido), a
-**Etapa 15** (nove serviços de tradução, credenciais) e a atualização automática de RF-416 a
-RF-435 (servidor de distribuição).
+1. **RF-561 a RF-563** (robustez) e **RF-564 a RF-567** (evolução) são, em boa parte,
+   propriedades do que já foi construído. Falta uma passada de REVISÃO que as confirme, e
+   testes que as travem — sobretudo RF-562 (perfil corrompido, pasta ausente, monitor
+   removido) e RF-566 (acrescentar idioma/motor/serviço sem tocar no laço).
+2. **RF-555 e RF-556** — liberação determinística de recursos gráficos e recriação do mapa
+   de bits só quando as dimensões mudam. Verificar no `OverlaySurface`.
+3. A **PARTE VIII** linha a linha, conferindo cada situação extrema contra o código.
+
+Continuam dependendo de coisas de fora: RF-539 a RF-542, a **Etapa 15** (nove serviços de
+tradução) e a atualização automática de RF-416 a RF-435.
 
 ## Etapas concluídas
 
@@ -71,6 +76,7 @@ RF-435 (servidor de distribuição).
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
 | **17 — Interface completa** | RF-481 a RF-546, RF-054 a RF-064, RF-250 a RF-253 | **Completa.** As sete abas de V.3 e as seis janelas de V.4 que não dependem de serviços externos, todas verificadas em imagem. |
+| **19 — Endurecimento, primeira leva** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-560 | **Instância única verificada na máquina**, liberação das imagens de região, detalhamento do indicador de memória e o aviso de mudança de monitor. |
 
 Também prontos, transversais a tudo:
 
@@ -90,7 +96,7 @@ Também prontos, transversais a tudo:
 | 15 — Demais serviços de tradução | RF-249 a RF-307 | Nove serviços. A maioria exige credenciais que só o usuário tem. |
 | 17b — Janelas auxiliares (V.3 e V.4) | RF-523 a RF-546 | Opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas e de chaves. |
 | 18b — Atualização automática e comunidade | RF-416 a RF-435 | Precisa de um servidor de distribuição que não existe. |
-| 19 — Endurecimento | RF-552 a RF-567 e toda a PARTE VIII | |
+| 19 — Endurecimento | RF-560 a RF-567, PARTE VIII | O que resta é revisão do que já existe, não construção. |
 
 Lacunas conhecidas, fora da ordem de construção:
 
@@ -465,6 +471,24 @@ Duas decisões que os testes fixam:
   pular uma chave boa sem nunca tentar. Editar uma chave também a devolve ao rodízio — o
   usuário acabou de corrigir o que provavelmente causou o erro.
 
+## Endurecimento
+
+- `Lifecycle/SingleInstanceGuard.cs` — RF-001, RF-002. **Verificado na máquina real:** a
+  segunda instância informa e encerra; com o marcador `multi-instancia`, duas rodam juntas;
+  e uma trava órfã, deixada por um encerramento abrupto, não impede a próxima abertura.
+- `Diagnostics/MemoryReport.cs` — RF-558, RF-559. O total mais as três parcelas que o
+  usuário controla sem saber: imagens de região (ampliação e número de áreas), cache
+  (uso prolongado) e mapa de bits da sobreposição (tamanho da janela). O detalhamento fica
+  a um passe de mouse, sem abrir diálogo.
+- **RF-554** — cada imagem de região é solta assim que a região termina, e não ao fim do
+  ciclo: é o que impede o pico de memória de crescer com o número de áreas, que é
+  justamente quando o usuário está no limite. Três testes travam isso, incluindo um que
+  confere que os PIXELS foram soltos, e não só descontados do contador.
+- **RF-086 / RF-087** — o mesmo tique que amostra a memória confere a disposição dos
+  monitores. Quando ela muda e alguma área fica fora da tela, o programa avisa apontando
+  QUAIS e abre o gerenciamento de áreas. Nenhuma área é movida: o programa não sabe onde o
+  conteúdo do jogo foi parar, e movê-la produziria uma região errada em silêncio.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -617,6 +641,22 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     botões sairiam claros com texto claro. É a mesma armadilha da decisão 15, e desta vez
     apareceu antes de chegar à tela — a janela de áreas saiu ilegível na sonda. Os dois
     passaram a fixar o tema escuro.
+
+27. **RF-552 contra RF-558.** Um pede "nenhum temporizador ativo" em ociosidade; o outro
+    pede um indicador de memória atualizado periodicamente. Literalmente, os dois não cabem.
+    A resolução: os temporizadores só correm quando há o que mostrar — o de estado enquanto
+    a janela principal está visível, o dos contadores enquanto a aba de depuração está à
+    vista. Quem escondeu a janela é justamente quem está jogando, e é dele que RF-552 fala.
+    Deixar um temporizador correndo e não fazer nada no tique é um temporizador ativo do
+    mesmo jeito.
+
+28. **Trava de instância por arquivo, não por mutex nomeado.** Mutex nomeado é conceito do
+    Windows, e a abstração de RF-577 não teria o que oferecer nos outros sistemas. O arquivo
+    com trava exclusiva funciona nos três e tem uma propriedade que o mutex não tem: guarda
+    o identificador do processo dono, então uma trava órfã é reconhecível e removível em vez
+    de bloquear o programa para sempre. Um teste achou o caso que faltava — `pasta
+    inexistente` lança `DirectoryNotFoundException`, que deriva de `IOException`, e o
+    programa se recusava a abrir alegando que já estava aberto.
 
 ## Como rodar os testes
 

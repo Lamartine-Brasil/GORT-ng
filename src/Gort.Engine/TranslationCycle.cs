@@ -50,6 +50,9 @@ public sealed class CycleSettings
     /// RF-490 é cumprido: desligar o modo restaura o comportamento normal sem reiniciar.
     /// </summary>
     public CycleDiagnostics? Diagnostics { get; init; }
+
+    /// <summary>RF-554 / RF-559 — Medidor das imagens de região vivas.</summary>
+    public LiveImageMeter? ImageMeter { get; init; }
 }
 
 /// <summary>O que um ciclo produziu.</summary>
@@ -141,6 +144,10 @@ public sealed class TranslationCycle
 
         if (captured.Count == 0) return CycleResult.Empty;
 
+        // RF-554 — não há mais de um conjunto de imagens de região vivo por vez: o conjunto
+        // anterior já foi solto no ciclo passado, e o medidor recomeça com este.
+        settings.ImageMeter?.Reset();
+
         var regions = new List<RegionResult>(captured.Count);
         var blockTexts = new List<string>();
         var blockOwners = new List<(int RegionIndex, int BlockIndex)>();
@@ -148,6 +155,8 @@ public sealed class TranslationCycle
 
         foreach (var region in captured)
         {
+            settings.ImageMeter?.Add(region.Image.ByteCount);
+
             // RF-500 — "salvar captura": a imagem que entrou, antes de qualquer tratamento.
             var debug = settings.Diagnostics;
             if (debug?.Options.NativeSaveCapture == true)
@@ -220,6 +229,13 @@ public sealed class TranslationCycle
             }
 
             regions.Add(result);
+
+            // RF-554 / RF-099 — a partir daqui esta região não é mais necessária: o OCR já
+            // leu a imagem tratada e a análise de cor já leu a original. Soltar aqui, e não
+            // ao fim do ciclo, é o que impede o pico de memória de crescer com o número de
+            // áreas — que é justamente quando o usuário está no limite.
+            settings.ImageMeter?.Remove(region.Image.ByteCount);
+            region.Release();
         }
 
         string recognizedText = recognized.ToString();

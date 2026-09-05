@@ -384,3 +384,9 @@ about.no_dictionaries,Nenhum dicionário carregado.
 about.repository,Repositório
 about.project,Página do projeto
 about.close,Fechar
+
+# ─── VII.2 — detalhamento do indicador de memória (RF-559) ───────────────────
+memory.regions,"Imagens de região: {0}"
+memory.cache,"Cache de traduções: {0}"
+memory.overlay,"Mapa de bits da sobreposição: {0}"
+msg.areas_invalid,"A disposição dos monitores mudou e as áreas {0} ficaram fora da tela. Corrija-as no gerenciamento de áreas — nenhuma foi movida automaticamente."

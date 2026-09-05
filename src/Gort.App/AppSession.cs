@@ -122,6 +122,9 @@ public sealed class AppSession : IDisposable
     /// <summary>RF-496 — Gravação do resultado no formato do banco de dados.</summary>
     public ResultFileWriter ResultFile { get; private set; } = null!;
 
+    /// <summary>RF-554 / RF-559 — Imagens de região vivas neste instante.</summary>
+    public LiveImageMeter ImageMeter { get; } = new();
+
     /// <summary>RF-302 — Presets de API personalizada, das duas fontes.</summary>
     public ApiPresetStore ApiPresets { get; private set; } = null!;
 
@@ -301,6 +304,10 @@ public sealed class AppSession : IDisposable
             // RF-490 — fora do modo de depuração isto é nulo, e o ciclo volta a ser
             // exatamente o que era: desligar o modo restaura o comportamento sem reiniciar.
             Diagnostics = Debug.Enabled ? BuildCycleDiagnostics() : null,
+
+            // RF-554 — o medidor vale sempre, não só em depuração: ele existe para o
+            // indicador de RF-558, que é permanente.
+            ImageMeter = ImageMeter,
         };
     }
 
@@ -336,6 +343,36 @@ public sealed class AppSession : IDisposable
 
     /// <summary>RF-031 / RF-530 — As opções avançadas, no seu arquivo global.</summary>
     public void SaveAdvanced() => Advanced.Save(Paths.AdvancedOptions);
+
+    /// <summary>
+    /// RF-558 / RF-559 — O retrato de memória: o total do processo e as três parcelas que o
+    /// usuário controla sem saber.
+    ///
+    /// RF-560 — só soma números que outras partes já mantêm; nada aqui percorre estrutura.
+    /// </summary>
+    public MemoryReport MemorySnapshot(long overlayBitmapBytes)
+    {
+        long process;
+        try
+        {
+            using var current = System.Diagnostics.Process.GetCurrentProcess();
+            process = current.WorkingSet64;
+        }
+        catch
+        {
+            process = 0;
+        }
+        if (process <= 0) process = GC.GetTotalMemory(false);
+
+        return new MemoryReport
+        {
+            ProcessBytes = process,
+            RegionImageBytes = ImageMeter.Bytes,
+            TranslationCacheBytes = (Memory?.ApproximateByteCount ?? 0)
+                                    + (Pipeline.Collection?.ApproximateByteCount ?? 0),
+            OverlayBitmapBytes = overlayBitmapBytes,
+        };
+    }
 
     /// <summary>RF-020 — O perfil principal é salvo sempre que o usuário aplica configurações.</summary>
     public void SaveProfile()
