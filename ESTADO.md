@@ -24,12 +24,33 @@ Gort.sln
 │   ├── Gort.CycleProbe/        ciclo completo de ponta a ponta (Etapa 7)
 │   └── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        516 testes
+    ├── Gort.Core.Tests/        530 testes
     ├── Gort.Platform.Tests/     33 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       19 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
+
+## Onde parei — 4 de setembro de 2026
+
+Último commit: **Etapa 18 — o retrato de análise**. 618 testes passando (530 + 33 + 36 + 19),
+tudo compilando.
+
+**Próximo passo, na ordem:**
+
+1. Ligar `DiagnosticRecorder` ao ciclo: chamar `Build` ao fim de `TranslationCycle`, e
+   `CompleteDrawing` no fim do desenho da sobreposição (RF-493), com os tempos e os
+   contadores de acerto do cache de RF-494. O comportamento de RF-495 já está pronto e
+   testado — o gravador cuida dele sozinho quando um ciclo novo chega antes do desenho.
+2. Ligar os sinalizadores de `DebugOptions` à aba de depuração da interface, e à persistência
+   (RF-490 a RF-491, RF-500).
+3. RF-499 — comando de limpar a memória de exibição, protegido enquanto houver gravação
+   em curso.
+4. RF-497 — pasta de análise acessível pela interface.
+
+Depois disso, escolher entre a **Etapa 17b** (janelas auxiliares de V.3 e V.4) e a
+**Etapa 19** (endurecimento e PARTE VIII). A Etapa 15 e a atualização automática de RF-416 a
+RF-435 dependem de coisas de fora: credenciais dos serviços e um servidor de distribuição.
 
 ## Etapas concluídas
 
@@ -54,6 +75,7 @@ Gort.sln
 | **— Detecção de mudança 🔒** | RF-192 a RF-205 | **Completa.** |
 | **— Cache e fontes locais** | RF-206 a RF-224, RF-241 a RF-243 | **Completa.** |
 | **13 — Análise automática de cor 🔒** | RF-393 a RF-415 | **Completa e verificada.** Os quatro critérios de aceite do cap. 20 passam. |
+| **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Retrato de análise completo** e testado, inclusive a regra de RF-495. Falta ligá-lo ao ciclo e à sobreposição, e a atualização automática (RF-416 a RF-435). |
 
 Também prontos, transversais a tudo:
 
@@ -70,13 +92,18 @@ Também prontos, transversais a tudo:
 
 | Etapa | Requisitos | Observação |
 |---|---|---|
-| 12 — Modo sobreposição, layout | RF-344 a RF-386, RF-392 | Colisões, tamanho automático de fonte, quebra por caractere. |
-| 14 — Demais motores de OCR | RF-122 a RF-140, RF-147 a RF-151 | |
-| 15 — Demais serviços de tradução | RF-249 a RF-307 | |
-| 16 — Captura de janela anexada e auxiliares | RF-089 a RF-097, RF-454 a RF-480 | Depende da Etapa 12. |
-| 17 — Janelas auxiliares (V.3 e V.4) | RF-523 a RF-546 | Opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas. |
-| 18 — Atualização, comunidade e depuração | RF-416 a RF-435, RF-490 a RF-500 | |
+| 15 — Demais serviços de tradução | RF-249 a RF-307 | Nove serviços. A maioria exige credenciais que só o usuário tem. |
+| 17b — Janelas auxiliares (V.3 e V.4) | RF-523 a RF-546 | Opções avançadas, conta-gotas, editor de dicionário, gerenciamento de áreas e de chaves. |
+| 18b — Ligação do diagnóstico e atualização | RF-416 a RF-435, RF-491, RF-497 a RF-500 | Ligar o gravador ao ciclo e à sobreposição; a atualização automática precisa de um servidor de distribuição que não existe. |
 | 19 — Endurecimento | RF-552 a RF-567 e toda a PARTE VIII | |
+
+Lacunas conhecidas, fora da ordem de construção:
+
+- **Captura de janela anexada** (C2/C3, RF-089 a RF-097) — não implementada no macOS.
+- **Motores de OCR clássico, de nuvem e por ambiente interpretado** — dependem de SDKs e
+  credenciais que não há como exercitar aqui; as regras estão prontas.
+- **Atalhos globais** — a lógica está verificada, mas o registro no sistema depende da
+  permissão de Acessibilidade, ausente nesta máquina.
 
 ## Camada de plataforma — o que está verificado
 
@@ -319,6 +346,28 @@ As sete abas de V.1 estão no ar, na ordem fixa, com a de Depuração oculta at�
 ativado (RF-490). O assistente de configuração rápida (RF-515, RF-516) aplica tudo de uma
 vez, e a ordem importa: parar a tradução primeiro, porque tudo o que vem depois mexe em
 configuração que o laço estaria usando.
+
+## Depuração e diagnóstico
+
+O capítulo 27 chama o retrato de análise de "o que transforma *ficou ruim* em evidência
+utilizável" — é o arquivo que permite ajustar os valores 🔒 sem adivinhar.
+
+- `Diagnostics/AnalysisSnapshot.cs` — RF-492 a RF-494. Um JSON por ciclo, com instante, modo
+  de janela, motor, serviço, os textos, e por área: retângulos, cores automáticas com os
+  indicadores de qualidade, todas as linhas com suas palavras e caixas, e todos os blocos
+  com os seus quatro retângulos. A parte de desenho traz o tamanho de fonte final de cada
+  bloco, as linhas depois da quebra, os tempos e os acertos do cache. O nome do arquivo tem
+  milissegundos, porque um laço de 300 ms produz mais de três retratos por segundo.
+- `Diagnostics/DiagnosticRecorder.cs` — monta o retrato e cuida de **RF-495**: quando um
+  ciclo novo começa antes de o desenho completar o retrato anterior, o pendente é gravado
+  **sem** a parte de desenho, e não descartado. Perder o retrato justamente do quadro em que
+  o desenho demorou seria perder a evidência do problema que se quer investigar.
+- `Diagnostics/ResultFileWriter.cs` — RF-496. Grava o resultado de cada ciclo no **formato do
+  banco de dados** (`/s`, `/t`, `/e`), reaproveitando `PairFile`, para que o usuário construa
+  bancos a partir do uso real e depois os carregue como fonte local. Um teste grava pelo
+  escritor e lê de volta pelo leitor do banco.
+- `DiagnosticCounters` — RF-498. Contadores de OCR, traduções e chamadas de rede, com um
+  registro de mensagens com teto, para não crescer sem limite numa sessão longa.
 
 ## Decisões registradas
 
