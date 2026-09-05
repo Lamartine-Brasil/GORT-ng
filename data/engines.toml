@@ -25,6 +25,14 @@ schema_version = 1
 #                    NÃO pode (RF-122).
 # ═══════════════════════════════════════════════════════════════════════════
 
+# RF-225 — O serviço de tradução PADRÃO é o tradutor web gratuito. É contra ele
+# que a latência do ciclo deve ser medida.
+default_translation_service = "webfree"
+
+# RF-239 — idioma-ponte da tradução em duas etapas. RF-567: quem é o idioma-ponte é DADO,
+# não literal no código. Vazio desliga a tradução ponte em todos os serviços.
+bridge_language = "ja"
+
 [[ocr_engine]]
 key = "classic"
 name_key = "ocr.classic"
@@ -89,9 +97,6 @@ languages = ["en", "ja"]
 #                      remotamente (RF-417).
 # ═══════════════════════════════════════════════════════════════════════════
 
-# RF-225 — O serviço de tradução PADRÃO é o tradutor web gratuito. É contra ele
-# que a latência do ciclo deve ser medida.
-default_translation_service = "webfree"
 
 [[translation_service]]
 key = "localdb"

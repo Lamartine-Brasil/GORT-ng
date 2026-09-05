@@ -25,8 +25,20 @@ public sealed class MacVisionOcr : IOcrEngine
     private readonly nint _requestClass;
     private readonly nint _handlerClass;
 
-    public MacVisionOcr()
+    /// <summary>
+    /// RF-151 — Os idiomas de ORIGEM previstos na tabela (RF-309), para a interseção.
+    ///
+    /// Vem de fora, do catálogo: uma lista fixa aqui faria um idioma novo em
+    /// `languages.toml` ser ignorado pelo motor do sistema sem explicação, e é justamente o
+    /// que RF-567 proíbe. Vazia significa "não filtrar" — é o que os testes e a sonda usam.
+    /// </summary>
+    private readonly IReadOnlyCollection<string> _knownLanguages;
+
+    public MacVisionOcr() : this(Array.Empty<string>()) { }
+
+    public MacVisionOcr(IReadOnlyCollection<string> knownLanguages)
     {
+        _knownLanguages = knownLanguages;
         // As classes do Objective-C só existem depois que o framework que as define é
         // carregado no processo. Perguntar por elas antes disso devolve nulo, e o motor se
         // declararia indisponível numa máquina em que ele funciona perfeitamente.
@@ -153,11 +165,20 @@ public sealed class MacVisionOcr : IOcrEngine
                 codes.Add(code);
 
                 // O sistema devolve etiquetas como "en-US" e "ja"; RF-316 trata "en" e
-                // "en-US" como equivalentes.
+                // "en-US" como equivalentes, então a região é descartada.
+                //
+                // RF-567 — nenhuma lista de idiomas conhecidos aqui: o motor informa o que o
+                // SISTEMA oferece, e quem decide o que o programa suporta é o catálogo. Uma
+                // lista fixa neste ponto faria um idioma novo em `languages.toml` ser
+                // ignorado pelo motor do sistema sem explicação.
                 string key = code.Split('-')[0].ToLowerInvariant();
-                string mapped = key switch { "ja" => "ja", "en" => "en", _ => "" };
+                if (key.Length == 0) continue;
 
-                if (mapped.Length > 0 && !keys.Contains(mapped)) keys.Add(mapped);
+                // RF-151 — a lista oferecida é a INTERSEÇÃO entre o que o motor reconhece e
+                // os idiomas de origem da tabela. Quem são eles vem de fora (RF-567).
+                if (_knownLanguages.Count > 0 && !_knownLanguages.Contains(key)) continue;
+
+                if (!keys.Contains(key)) keys.Add(key);
             }
         }
         catch

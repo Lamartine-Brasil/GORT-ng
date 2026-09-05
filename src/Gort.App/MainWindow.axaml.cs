@@ -892,12 +892,10 @@ public partial class MainWindow : Window
 
         if (_session.Engines.Resolve(engine) is { } resolved) p.OcrEngine = resolved.Key;
 
-        // Escolhe o serviço: para inglês, o tradutor web gratuito; para japonês, o tradutor
-        // local se disponível, senão o gratuito.
-        p.TranslationService = p.OcrLanguage == "ja"
-            && _session.Catalog.Service("localproc") is not null
-                ? "webfree"     // o tradutor local depende de biblioteca ausente aqui
-                : "webfree";
+        // O serviço é o padrão do catálogo (RF-225). Antes havia aqui uma escolha por
+        // idioma cujos dois ramos devolviam o mesmo valor — e que comparava com "ja",
+        // que é justamente o que RF-567 proíbe.
+        p.TranslationService = _session.Catalog.DefaultTranslationService;
 
         // Define os códigos de idioma de cada serviço, e o destino padrão (RF-314).
         var source = _session.Catalog.Language(p.OcrLanguage);

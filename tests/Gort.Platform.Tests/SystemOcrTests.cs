@@ -21,7 +21,13 @@ public class SystemOcrTests
     }
 
     [SupportedOSPlatform("macos")]
-    private static IOcrEngine CreateMac() => new MacOS.MacVisionOcr();
+    /// <summary>
+    /// RF-151 — Os idiomas de origem da tabela, que é com quem o motor faz a interseção.
+    /// Aqui eles são passados à mão porque o teste não carrega o catálogo; na aplicação
+    /// vêm dele.
+    /// </summary>
+    private static IOcrEngine CreateMac()
+        => new MacOS.MacVisionOcr(new[] { "en", "ja" });
 
     private static ImageBuffer Solid(int w, int h, byte value)
     {

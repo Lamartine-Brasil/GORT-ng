@@ -25,7 +25,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        585 testes
+    ├── Gort.Core.Tests/        601 testes
     ├── Gort.Platform.Tests/     39 testes
     ├── Gort.Ocr.Tests/          36 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -34,21 +34,26 @@ Gort.sln
 
 ## Onde parei — 5 de setembro de 2026
 
-Último commit: **Etapa 19, primeira leva** — instância única, memória e mudança de monitor.
-688 testes passando (585 + 39 + 36 + 28).
+Último commit: **robustez e evolução travadas por teste**. 704 testes passando
+(601 + 39 + 36 + 28).
 
-**Próximo passo — o que resta da Etapa 19:**
+**As 19 etapas da PARTE X estão construídas.** O que resta não é etapa, é o que depende de
+coisas de fora desta máquina:
 
-1. **RF-561 a RF-563** (robustez) e **RF-564 a RF-567** (evolução) são, em boa parte,
-   propriedades do que já foi construído. Falta uma passada de REVISÃO que as confirme, e
-   testes que as travem — sobretudo RF-562 (perfil corrompido, pasta ausente, monitor
-   removido) e RF-566 (acrescentar idioma/motor/serviço sem tocar no laço).
-2. **RF-555 e RF-556** — liberação determinística de recursos gráficos e recriação do mapa
-   de bits só quando as dimensões mudam. Verificar no `OverlaySurface`.
-3. A **PARTE VIII** linha a linha, conferindo cada situação extrema contra o código.
+- **Etapa 15** — os nove serviços de tradução de RF-249 a RF-307. A maioria precisa de
+  credenciais que só o usuário tem; o repositório de chaves e os presets de API, que são a
+  parte que dá para construir sem elas, já existem.
+- **Atualização automática** — RF-416 a RF-435, que precisa de um servidor de distribuição.
+- **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
+  servidor da comunidade e navegador embutido.
+- **Captura de janela anexada** — C2/C3, RF-089 a RF-097, não implementadas no macOS.
+- **Motores de OCR clássico, de nuvem e por ambiente interpretado** — as regras estão
+  prontas; faltam os SDKs.
+- **Atalhos globais** — a lógica está verificada, mas o registro no sistema depende da
+  permissão de Acessibilidade, ausente nesta máquina.
 
-Continuam dependendo de coisas de fora: RF-539 a RF-542, a **Etapa 15** (nove serviços de
-tradução) e a atualização automática de RF-416 a RF-435.
+Uma passada final útil seria conferir a **PARTE VIII linha a linha** contra o código, com um
+teste por situação onde ele fizer sentido.
 
 ## Etapas concluídas
 
@@ -76,7 +81,7 @@ tradução) e a atualização automática de RF-416 a RF-435.
 | **18 — Depuração e diagnóstico** | RF-490 a RF-500 | **Completa.** Retrato de análise ligado ao ciclo e ao desenho da sobreposição, contadores, gravação do resultado e os sinalizadores de RF-500. Falta a atualização automática (RF-416 a RF-435), que precisa de um servidor de distribuição. |
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
 | **17 — Interface completa** | RF-481 a RF-546, RF-054 a RF-064, RF-250 a RF-253 | **Completa.** As sete abas de V.3 e as seis janelas de V.4 que não dependem de serviços externos, todas verificadas em imagem. |
-| **19 — Endurecimento, primeira leva** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-560 | **Instância única verificada na máquina**, liberação das imagens de região, detalhamento do indicador de memória e o aviso de mudança de monitor. |
+| **19 — Endurecimento** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-567 | **Instância única verificada na máquina**, liberação das imagens de região, indicador de memória detalhado, aviso de mudança de monitor, e a robustez e a evolução travadas por teste — inclusive uma varredura do código-fonte para RF-567. |
 
 Também prontos, transversais a tudo:
 
@@ -489,6 +494,22 @@ Duas decisões que os testes fixam:
   QUAIS e abre o gerenciamento de áreas. Nenhuma área é movida: o programa não sabe onde o
   conteúdo do jogo foi parar, e movê-la produziria uma região errada em silêncio.
 
+## Robustez e evolução, travadas por teste
+
+RF-561 a RF-567 descrevem PROPRIEDADES do programa inteiro, não uma classe. Os testes de
+`RobustnessTests` e `DataDrivenTests` existem para que elas parem de ser afirmações:
+
+- **RF-562** — perfil corrompido, binário, vazio ou de outro produto: todos caem nos
+  padrões. Pasta de dados ausente é criada. Catálogo ausente não lança — sem catálogo não
+  há o que traduzir, mas o programa precisa ABRIR para poder dizer isso (RF-006).
+- **RF-565** — chaves desconhecidas sobrevivem à regravação, conjuntos fechados são
+  gravados por texto e todo arquivo carrega a versão do esquema.
+- **RF-567** — uma varredura do CÓDIGO-FONTE atrás de comparações com identificadores de
+  idioma. Ela procura comparação e busca, não valor padrão: um campo que nasce com `"en"` é
+  decisão de produto declarada (RF-309), que o usuário muda na primeira tela; o que RF-567
+  proíbe é o programa DECIDIR por comparação. A varredura foi verificada injetando uma
+  violação e conferindo que ela falha.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -657,6 +678,20 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     de bloquear o programa para sempre. Um teste achou o caso que faltava — `pasta
     inexistente` lança `DirectoryNotFoundException`, que deriva de `IOException`, e o
     programa se recusava a abrir alegando que já estava aberto.
+
+29. **Três violações reais de RF-567, achadas pela varredura.** O idioma-ponte de RF-239
+    estava fixo no código; a configuração rápida comparava com `"ja"` num ramo cujos dois
+    lados devolviam o mesmo valor; e o motor de OCR do sistema tinha uma lista de idiomas
+    conhecidos dentro dele, que faria um idioma novo em `languages.toml` ser ignorado sem
+    explicação. Os três viraram dado: `bridge_language` em `engines.toml`, o padrão do
+    catálogo, e a interseção de RF-151 recebendo os idiomas de fora.
+
+30. **Um defeito silencioso no formato do catálogo.** `default_translation_service` e
+    `bridge_language` estavam DEPOIS dos `[[ocr_engine]]` no arquivo — e em TOML uma chave
+    solta pertence à última tabela aberta, não à raiz. A leitura falhava e caía no padrão
+    do código, que por coincidência era o mesmo valor, então nada parecia errado. As chaves
+    foram para o topo do arquivo e um teste confere que um valor DIFERENTE do padrão é
+    lido.
 
 ## Como rodar os testes
 

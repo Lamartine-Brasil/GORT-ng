@@ -25,6 +25,7 @@ public sealed class AppCatalog
         IReadOnlyList<TranslationServiceInfo> services,
         string defaultTarget,
         string defaultService,
+        string bridgeLanguage,
         LlmCatalog llm,
         IReadOnlyList<string> fontFallbacks,
         IReadOnlyDictionary<string, string> links,
@@ -38,6 +39,7 @@ public sealed class AppCatalog
         TranslationServices = services;
         DefaultTargetLanguage = defaultTarget;
         DefaultTranslationService = defaultService;
+        BridgeLanguage = bridgeLanguage;
         Llm = llm;
         FontFallbacks = fontFallbacks;
         Links = links;
@@ -56,6 +58,14 @@ public sealed class AppCatalog
 
     /// <summary>RF-225 — Serviço de tradução padrão (tradutor web gratuito).</summary>
     public string DefaultTranslationService { get; }
+
+    /// <summary>
+    /// RF-239 — Idioma-ponte da tradução em duas etapas.
+    ///
+    /// RF-567 — vem dos dados, e não de um literal no código: a especificação nomeia o
+    /// japonês, mas nomear é decisão de produto, e produto muda em arquivo.
+    /// </summary>
+    public string BridgeLanguage { get; }
 
     public LlmCatalog Llm { get; }
 
@@ -168,6 +178,7 @@ public sealed class AppCatalog
         var services = new List<TranslationServiceInfo>();
         string defaultTarget = "pt-BR";
         string defaultService = "webfree";
+        string bridgeLanguage = "";
         LlmCatalog? llm = null;
         ModernOcrModels? modernModels = null;
         Translation.Services.FreeWebTranslatorOptions? freeWeb = null;
@@ -207,6 +218,7 @@ public sealed class AppCatalog
         if (engTable is not null)
         {
             defaultService = GetString(engTable, "default_translation_service") ?? defaultService;
+            bridgeLanguage = GetString(engTable, "bridge_language") ?? bridgeLanguage;
 
             foreach (var item in GetArray(engTable, "ocr_engine"))
             {
@@ -315,7 +327,7 @@ public sealed class AppCatalog
         };
 
         return new AppCatalog(languages, engines, services, defaultTarget, defaultService,
-                              llm, fonts, links, modernModels, freeWeb);
+                              bridgeLanguage, llm, fonts, links, modernModels, freeWeb);
     }
 
     private static TomlTable? TryRead(string path, Action<string>? log)

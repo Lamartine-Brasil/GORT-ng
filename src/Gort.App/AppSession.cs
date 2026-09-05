@@ -160,7 +160,11 @@ public sealed class AppSession : IDisposable
         // pelos disponíveis, então um motor indisponível nunca chega à lista do usuário.
         if (OperatingSystem.IsMacOS())
         {
-            engines.Register(new Gort.Platform.MacOS.MacVisionOcr());
+            // RF-151 — a interseção com os idiomas de origem da tabela é feita pelo motor,
+            // mas quem são eles vem do catálogo.
+            engines.Register(new Gort.Platform.MacOS.MacVisionOcr(
+                catalog.Languages.Select(l => l.OcrCode).ToHashSet(
+                    StringComparer.OrdinalIgnoreCase)));
         }
 
         var session = new AppSession(catalog, paths, profile, advanced, appOptions,
@@ -259,10 +263,15 @@ public sealed class AppSession : IDisposable
             {
                 SourceCode = source.CodeFor(info.Key) ?? source.Key,
                 TargetCode = target.CodeFor(info.Key) ?? target.Key,
-                // RF-239 — só se aplica quando a origem não é japonês E o serviço declara
-                // a tradução ponte suportada.
-                Bridge = Advanced.BridgeTranslation && info.SupportsBridge && source.Key != "ja",
-                BridgeCode = Catalog.Language("ja")?.CodeFor(info.Key),
+                // RF-239 — só se aplica quando a origem NÃO É o idioma-ponte e o serviço
+                // declara a tradução ponte suportada. Quem é o idioma-ponte vem do
+                // catálogo (RF-567), não de um literal aqui.
+                Bridge = Advanced.BridgeTranslation
+                         && info.SupportsBridge
+                         && Catalog.BridgeLanguage.Length > 0
+                         && !string.Equals(source.Key, Catalog.BridgeLanguage,
+                                           StringComparison.OrdinalIgnoreCase),
+                BridgeCode = Catalog.Language(Catalog.BridgeLanguage)?.CodeFor(info.Key),
             },
             Ocr = engine,
             OcrLanguage = source.Key,
