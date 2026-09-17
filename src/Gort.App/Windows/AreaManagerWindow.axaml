@@ -20,6 +20,7 @@
         <Button x:Name="AddAreaButton" Padding="12,7" />
         <Button x:Name="AddExclusionButton" Padding="12,7" />
         <Button x:Name="ColorGroupsButton" Padding="12,7" />
+        <Button x:Name="EyedropperButton" Padding="12,7" />
       </StackPanel>
 
       <StackPanel Orientation="Horizontal" Spacing="8">

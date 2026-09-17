@@ -433,6 +433,7 @@ public partial class MainWindow : Window
         ShortcutsLabel.Text = _loc["other.shortcuts"];
         AdvancedButton.Content = _loc["other.advanced"];
         DictionaryEditorButton.Content = _loc["dict.title"];
+        ShareConfigButton.Content = _loc["other.share_config"];
         WindowPickerButton.Content = _loc["picker_window.title"];
         KeysButton.Content = _loc["keys.title"];
         AboutButton.Content = _loc["about.title"];
@@ -631,6 +632,10 @@ public partial class MainWindow : Window
 
         AdvancedButton.Click += (_, _) => OpenAdvancedOptions();
         DictionaryEditorButton.Click += (_, _) => OpenDictionaryEditor();
+
+        // RF-046 — exportar a configuração atual para a área de transferência e abrir a
+        // página de envio.
+        ShareConfigButton.Click += (_, _) => _ = ShareConfigurationAsync();
 
         // RF-089 — o seletor de janelas do modo janela anexada.
         WindowPickerButton.Click += (_, _) => OpenWindowPicker();
@@ -1700,6 +1705,43 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// RF-046 — Exporta a configuração atual para a área de transferência e abre a página de
+    /// envio, para o usuário compartilhar configurações de jogos com a comunidade.
+    ///
+    /// Vai pela ÁREA DE TRANSFERÊNCIA, e não por arquivo: quem compartilha está prestes a
+    /// colar num formulário ou numa conversa, e um arquivo salvo em algum lugar seria um
+    /// passo a mais entre o que ele tem e o que ele quer fazer.
+    ///
+    /// O que sai é o perfil inteiro, no mesmo formato em que é gravado — então quem recebe
+    /// pode salvá-lo como `.gort` e carregá-lo sem conversão nenhuma.
+    /// </summary>
+    private async Task ShareConfigurationAsync()
+    {
+        try
+        {
+            string temp = Path.Combine(Path.GetTempPath(),
+                                       "gort-config-" + Guid.NewGuid().ToString("N") + ".gort");
+
+            // O que é compartilhado é o que está NA TELA, e não o último aplicado: quem
+            // acabou de ajustar um valor espera compartilhar esse ajuste.
+            Apply();
+            _session.Profile.Save(temp);
+
+            string text = File.ReadAllText(temp);
+            File.Delete(temp);
+
+            await Clipboard!.SetTextAsync(text);
+
+            Say("msg.config_copied");
+            OpenLink("community");
+        }
+        catch (Exception ex)
+        {
+            Say(_loc.Format("msg.error", ex.Message));
+        }
+    }
+
+    /// <summary>
     /// RF-543 — Sobre. As "versões dos dicionários" são o que o programa realmente sabe
     /// deles: o nome do arquivo e quantas entradas foram carregadas. Um número de versão
     /// que o dicionário não declara seria invenção.
@@ -1917,6 +1959,7 @@ public partial class MainWindow : Window
         {
             AddArea = kind => _ = DefineAreaAsync(kind),
             OpenColorGroups = OpenColorGroupsForFirstArea,
+            OpenEyedropper = OpenColorPicker,   // RF-080
             Changed = ShowFrames,
         };
 

@@ -36,10 +36,10 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **a área que segue o mouse, completa**. 782 testes passando
-(664 + 46 + 40 + 32).
+Último commit: **compartilhar configuração, conta-gotas por área e três citações**.
+782 testes passando (664 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 71**.
+A varredura por requisitos nunca citados no código saiu de **92 para 66**.
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -801,6 +801,17 @@ E mais:
 A camada de seleção virou `SelectRectAsync`, usada tanto por "definir área" quanto pela área
 do mouse: o gesto é o mesmo, e duplicá-lo era duplicar também a suspensão dos atalhos globais
 de RF-053.
+
+## Compartilhar configuração (RF-046)
+
+Exporta o perfil atual para a área de transferência e abre a página de envio. Vai pela área
+de transferência, e não por arquivo: quem compartilha está prestes a colar num formulário ou
+numa conversa, e um arquivo salvo em algum lugar seria um passo a mais entre o que ele tem e
+o que quer fazer. O que sai é o perfil inteiro, no mesmo formato em que é gravado — quem
+recebe salva como `.gort` e carrega sem conversão nenhuma.
+
+O que é compartilhado é o que está NA TELA, não o último aplicado: quem acabou de ajustar um
+valor espera compartilhar esse ajuste.
 
 ## Decisões registradas
 

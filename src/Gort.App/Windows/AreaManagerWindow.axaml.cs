@@ -36,6 +36,7 @@ public partial class AreaManagerWindow : Window
         AddAreaButton.Content = _loc["areas.add"];
         AddExclusionButton.Content = _loc["areas.add_exclusion"];
         ColorGroupsButton.Content = _loc["areas.color_groups"];
+        EyedropperButton.Content = _loc["areas.eyedropper"];
         ClearButton.Content = _loc["areas.clear"];
         ApplyButton.Content = _loc["areas.apply"];
         CancelButton.Content = _loc["areas.cancel"];
@@ -43,6 +44,9 @@ public partial class AreaManagerWindow : Window
         AddAreaButton.Click += (_, _) => AddArea?.Invoke(AreaKind.Normal);
         AddExclusionButton.Click += (_, _) => AddArea?.Invoke(AreaKind.Exclusion);
         ColorGroupsButton.Click += (_, _) => OpenColorGroups?.Invoke();
+
+        // RF-080 — cada área de OCR oferece um conta-gotas.
+        EyedropperButton.Click += (_, _) => OpenEyedropper?.Invoke();
 
         ClearButton.Click += (_, _) => { _regions.ClearAll(); Changed?.Invoke(); Refresh(); };
         ApplyButton.Click += (_, _) => { _applied = true; Close(); };
@@ -61,6 +65,9 @@ public partial class AreaManagerWindow : Window
 
     public Action<AreaKind>? AddArea { get; set; }
     public Action? OpenColorGroups { get; set; }
+
+    /// <summary>RF-080 — O conta-gotas da área selecionada.</summary>
+    public Action? OpenEyedropper { get; set; }
 
     /// <summary>Avisa que a lista mudou, para as molduras serem redesenhadas.</summary>
     public Action? Changed { get; set; }

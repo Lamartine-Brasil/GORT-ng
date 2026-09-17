@@ -48,6 +48,11 @@ public sealed class FreeWebTranslator : ITranslationService
 
         // RF-248 / P-54 — o tempo limite é do serviço, não do laço: um ciclo travado em rede
         // lenta é pior que uma tradução perdida (P1).
+        //
+        // RF-548 — quando a tradução exige rede, o tempo do ciclo é DOMINADO por ela, e os
+        // tempos limite de cada serviço são os tetos aceitos. Não há orçamento de P-05 que
+        // valha para o primeiro ciclo de um texto novo; o que cabe no orçamento é o segundo,
+        // que sai do cache.
         _http = http ?? new HttpClient { Timeout = P.FreeWebTranslatorTimeout };
     }
 

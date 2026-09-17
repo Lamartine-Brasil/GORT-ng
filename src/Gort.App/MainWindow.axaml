@@ -231,6 +231,7 @@
                   <Button x:Name="AdvancedButton" Padding="14,7" />
                   <Button x:Name="DictionaryEditorButton" Padding="14,7" />
                   <Button x:Name="WindowPickerButton" Padding="14,7" />
+                  <Button x:Name="ShareConfigButton" Padding="14,7" />
                   <Button x:Name="KeysButton" Padding="14,7" />
                   <Button x:Name="AboutButton" Padding="14,7" />
                 </StackPanel>

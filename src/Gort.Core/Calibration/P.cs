@@ -67,7 +67,14 @@ public static class P
     /// <summary>P-125 — Sono quando o intervalo entre ciclos ainda não passou. [Exposto: FIXO]</summary>
     public const int IdleLoopSleepMs = 100;
 
-    /// <summary>P-126 — Intervalo de verificação do pedido de parada durante uma espera longa. [Exposto: FIXO]</summary>
+    /// <summary>
+    /// RF-553 — Os pontos de SONDAGEM permitidos, e os únicos: P-20, P-31, P-126, P-137 e
+    /// P-143. Fora deles, o programa não consome CPU em espera ativa — durante o laço o
+    /// consumo é dominado pelo OCR e pelo pré-processamento, como o requisito exige.
+    ///
+    /// P-126 — Intervalo de verificação do pedido de parada durante uma espera longa.
+    /// [Exposto: FIXO]
+    /// </summary>
     public const int StopCheckIntervalMs = 50;
 
     /// <summary>P-132 — Valor em que o contador de identificação de tarefa volta a zero. [Exposto: FIXO]</summary>

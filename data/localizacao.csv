@@ -443,3 +443,6 @@ msg.profile_loaded,"Perfil ""{0}"" carregado."
 msg.service_not_set,"Este atalho ainda não tem um serviço associado."
 msg.service_missing,"O serviço ""{0}"" não existe mais."
 msg.service_switched,"Serviço de tradução: {0}"
+other.share_config,Compartilhar configuração
+msg.config_copied,"Configuração copiada para a área de transferência."
+areas.eyedropper,Conta-gotas

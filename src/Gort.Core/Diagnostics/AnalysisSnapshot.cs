@@ -149,7 +149,10 @@ public sealed class SnapshotDrawing
 
     public List<SnapshotDrawnBlock> Blocks { get; init; } = new();
 
-    // RF-494 — os quatro tempos do desenho e as contagens do cache de medição.
+    // RF-494 / RF-549 — os QUATRO tempos separados que o modo de depuração instrumenta:
+    // cálculo de tamanho e posição da janela, layout e desenho, apresentação na tela, e
+    // total. O desenho roda na thread de interface, e qualquer excesso é percebido como
+    // travamento — sem os quatro separados não há como saber qual deles cresceu.
     public double TotalMs { get; init; }
     public double SizeAndPositionMs { get; init; }
     public double LayoutAndDrawMs { get; init; }
