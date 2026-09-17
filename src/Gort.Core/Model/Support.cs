@@ -55,6 +55,7 @@ public enum ShortcutAction
     SnapshotArea,
     QuickArea,
     OpenDictionaryEditor,
+    /// <summary>RF-321 — Ocultar e reexibir a janela de tradução.</summary>
     ToggleTranslationWindow,
     ToggleMouseFollowArea,
 

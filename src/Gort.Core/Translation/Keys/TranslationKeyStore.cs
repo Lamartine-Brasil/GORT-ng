@@ -14,7 +14,13 @@ public enum KeyState
     Limit,
 }
 
-/// <summary>RF-250 / RF-253 — Uma credencial do rodízio.</summary>
+/// <summary>
+/// RF-250 / RF-253 — Uma credencial do rodízio.
+///
+/// RF-036 — o arquivo guarda uma LISTA de registros, cada um com identificador, segredo e
+/// tipo de plano, preservando a ordem em que o usuário os cadastrou. A ordem importa porque
+/// é ela que o rodízio usa para desempatar dentro de cada grupo (RF-252).
+/// </summary>
 public sealed class TranslationKey
 {
     /// <summary>Identificador visível da chave; é por ele que o usuário a reconhece.</summary>

@@ -1561,7 +1561,7 @@ public partial class MainWindow : Window
                 break;
 
             case ShortcutAction.ToggleMouseFollowArea:
-                _session.Regions.MouseFollowActive = !_session.Regions.MouseFollowActive;
+                _ = ToggleMouseFollowAsync();
                 break;
 
             case ShortcutAction.ToggleTranslationWindow:
@@ -1762,6 +1762,55 @@ public partial class MainWindow : Window
     /// RF-454 a RF-457 — A área que segue o mouse reposiciona-se a cada P-122, e só dispara
     /// o recálculo quando a posição EFETIVAMENTE mudou, no máximo uma vez a cada P-123.
     /// </summary>
+    /// <summary>
+    /// RF-458 / RF-461 — Alterna a área que segue o mouse.
+    ///
+    /// Na PRIMEIRA ativação, se a área dedicada ainda não existe, o programa abre a camada
+    /// de seleção para o usuário desenhá-la — e ativa o modo assim que ela existir. Sem
+    /// isso, o atalho "ativar" não faria nada visível e o usuário concluiria que está
+    /// quebrado.
+    /// </summary>
+    private async Task ToggleMouseFollowAsync()
+    {
+        var regions = _session.Regions;
+
+        if (!regions.MouseFollowActive && regions.MouseFollowArea is null)
+        {
+            var rect = await SelectRectAsync();
+            if (rect is null) return;
+
+            double scale = MonitorGeometry.ScaleOf(
+                _session.Platform.Monitors.Monitors, rect.Value);
+
+            regions.SetMouseFollowArea(
+                FrameGeometry.ToFrameRect(rect.Value, FrameGeometry.MetricsFor(scale)));
+
+            // RF-461 — criada com o gerenciamento fechado, ela PISCA visível por P-124 para
+            // o usuário saber onde ela está; depois some, porque ela acompanha o cursor e
+            // uma moldura permanente atrapalharia a leitura.
+            if (_areaManager is null) FlashMouseFollowArea();
+        }
+
+        regions.MouseFollowActive = !regions.MouseFollowActive;
+        ShowLoopState();
+    }
+
+    /// <summary>RF-461 — A área pisca por P-124 e some.</summary>
+    private void FlashMouseFollowArea()
+    {
+        var area = _session.Regions.MouseFollowArea;
+        if (area is null) return;
+
+        area.Visible = true;
+        ShowFrames();
+
+        DispatcherTimer.RunOnce(() =>
+        {
+            area.Visible = false;
+            if (_areaManager is null) CloseFrames();
+        }, TimeSpan.FromMilliseconds(Gort.Core.Calibration.P.MouseFollowFlashMs));
+    }
+
     private void StartMouseFollow()
     {
         var gate = RecalculationGate.ForMouseFollow();
@@ -1788,10 +1837,17 @@ public partial class MainWindow : Window
     // ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>RF-047 — Abre a camada de seleção sobre toda a área de trabalho virtual.</summary>
-    private async Task DefineAreaAsync(AreaKind kind = AreaKind.Normal)
+    /// <summary>
+    /// RF-047 a RF-053 — Abre a camada de seleção e devolve o retângulo de CAPTURA desenhado,
+    /// ou nulo se o usuário cancelou.
+    ///
+    /// Extraída de `DefineAreaAsync` porque a área que segue o mouse (RF-458) precisa do
+    /// mesmo gesto sem criar uma área normal.
+    /// </summary>
+    private async Task<Gort.Core.Model.Rect?> SelectRectAsync()
     {
         var monitors = _session.Platform.Monitors.Monitors;
-        if (monitors.Count == 0) return;
+        if (monitors.Count == 0) return null;
 
         var desktop = MonitorGeometry.VirtualDesktop(monitors);
 
@@ -1811,6 +1867,14 @@ public partial class MainWindow : Window
 
         Show();
         Activate();
+
+        return drawn;
+    }
+
+    private async Task DefineAreaAsync(AreaKind kind = AreaKind.Normal)
+    {
+        var monitors = _session.Platform.Monitors.Monitors;
+        var drawn = await SelectRectAsync();
 
         if (drawn is null) return;
 

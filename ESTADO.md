@@ -36,8 +36,10 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **a tradução da área de transferência, ligada de verdade**.
-782 testes passando (664 + 46 + 40 + 32).
+Último commit: **a área que segue o mouse, completa**. 782 testes passando
+(664 + 46 + 40 + 32).
+
+A varredura por requisitos nunca citados no código saiu de **92 para 71**.
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -783,6 +785,22 @@ E mais:
 - **RF-380 🔒** — uma varredura do código-fonte inteiro garante que não há `GC.Collect` em
   lugar nenhum. É a chamada que alguém acrescenta para "resolver" um consumo de memória que
   não entendeu, e o lugar onde ela apareceria é justamente o caminho quente.
+
+## A área que segue o mouse, completa
+
+- **RF-458** — na primeira ativação, se a área dedicada ainda não existe, o programa abre a
+  camada de seleção para o usuário desenhá-la e ativa o modo assim que ela existir. Sem isso,
+  o atalho "ativar" não faria nada visível e o usuário concluiria que está quebrado.
+- **RF-461** — criada com o gerenciamento fechado, ela pisca visível por P-124 e some. A
+  piscada existe porque ela acompanha o cursor: uma moldura permanente atrapalharia a
+  leitura, e nenhuma moldura deixaria o usuário sem saber onde ela está.
+- **RF-463** — cor de borda distinta. Cada tipo de área tem a sua: exclusão em vermelho
+  (RF-063), a que segue o mouse em azul, a rápida em âmbar, a instantânea em roxo. Confundir
+  a do mouse com uma área fixa faria o usuário procurar por que "a área não fica parada".
+
+A camada de seleção virou `SelectRectAsync`, usada tanto por "definir área" quanto pela área
+do mouse: o gesto é o mesmo, e duplicá-lo era duplicar também a suspensão dos atalhos globais
+de RF-053.
 
 ## Decisões registradas
 

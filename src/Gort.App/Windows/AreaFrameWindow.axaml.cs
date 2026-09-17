@@ -99,9 +99,17 @@ public partial class AreaFrameWindow : Window
         bool exclusion = _frame.Kind == AreaKind.Exclusion;
         var m = Metrics;
 
-        var accent = exclusion
-            ? new SolidColorBrush(Color.FromRgb(200, 40, 40))
-            : new SolidColorBrush(Color.FromRgb(30, 120, 30));
+        // RF-063 — exclusão em vermelho. RF-463 — a área que segue o mouse tem cor DISTINTA
+        // das demais: ela se move sozinha, e confundi-la com uma área fixa faria o usuário
+        // procurar por que "a área não fica parada".
+        var accent = new SolidColorBrush(_frame.Kind switch
+        {
+            AreaKind.Exclusion => Color.FromRgb(200, 40, 40),
+            AreaKind.MouseFollow => Color.FromRgb(40, 90, 200),
+            AreaKind.Quick => Color.FromRgb(180, 120, 20),
+            AreaKind.Snapshot => Color.FromRgb(120, 60, 170),
+            _ => Color.FromRgb(30, 120, 30),
+        });
 
         OuterBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(20, 20, 20));
         OuterBorder.BorderThickness = new Thickness(m.OuterBorder);
