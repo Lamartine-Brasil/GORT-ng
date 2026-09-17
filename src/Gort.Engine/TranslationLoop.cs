@@ -95,6 +95,16 @@ public sealed class LoopHost
     /// </summary>
     public Func<bool>? UnlockSpeed { get; init; }
 
+    /// <summary>
+    /// RF-097 — A fonte de imagem ainda é válida.
+    ///
+    /// No modo janela anexada, "a janela de captura não existir mais" obriga o laço a
+    /// ENCERRAR A SI MESMO: continuar girando produziria ciclo após ciclo sem imagem, e o
+    /// usuário veria a tradução parar sem nenhuma explicação. Nulo significa "sempre
+    /// válida", que é o caso da captura de tela.
+    /// </summary>
+    public Func<bool>? SourceStillValid { get; init; }
+
     /// <summary>Chamado quando o laço termina, para a interface refletir o estado.</summary>
     public Action? Stopped { get; init; }
 }
@@ -135,6 +145,15 @@ public sealed class TranslationLoop : IDisposable
         _host = host;
         _detector = detector ?? new ChangeDetector();
     }
+
+    /// <summary>
+    /// RF-097 — A mensagem exibida quando a fonte de imagem deixou de existir.
+    ///
+    /// Fica aqui, e não na interface, porque é o laço que descobre: quem a exibe precisa só
+    /// repassá-la.
+    /// </summary>
+    public const string SourceGoneMessage =
+        "A janela que estava sendo capturada não existe mais. A tradução parou.";
 
     /// <summary>RF-008 — O estado observável de fora.</summary>
     public LoopState State
@@ -311,6 +330,15 @@ public sealed class TranslationLoop : IDisposable
             {
                 Thread.Sleep(P.IdleLoopSleepMs);
                 continue;
+            }
+
+            // RF-097 — a janela anexada sumiu: o laço encerra a si mesmo. Note que ele
+            // TERMINA, e não dorme: o término da thread é o sinal que a interface usa para
+            // saber que a tradução parou (RF-009), e é por ele que o modo é desativado.
+            if (_host.SourceStillValid is { } valid && !valid())
+            {
+                _host.ReportError?.Invoke(SourceGoneMessage);
+                return;
             }
 
             var areas = _host.Areas();

@@ -1664,6 +1664,22 @@ public partial class MainWindow : Window
                 Dispatcher.UIThread.Post(() => SpeakResult(result));
             },
 
+            // RF-097 — quando a janela anexada some, o laço encerra a si mesmo. A pergunta
+            // é feita uma vez por ciclo, e não por captura: o custo é uma consulta ao
+            // sistema, e fazê-la por região a multiplicaria pelo número de áreas.
+            SourceStillValid = () =>
+            {
+                var attached = _session.AttachedWindow;
+                if (attached is null) return true;
+
+                if (_session.Platform.Windows.Exists(attached.Id)) return true;
+
+                // RF-090 — a captura para E o modo é desativado; sem isso o próximo
+                // "iniciar" tentaria a mesma janela morta.
+                Dispatcher.UIThread.Post(() => _session.AttachToWindow(null));
+                return false;
+            },
+
             FlushMemory = () => _session.Memory?.FlushAsync(),
             Stopped = () => Dispatcher.UIThread.Post(ShowLoopState),
         };

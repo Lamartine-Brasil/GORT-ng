@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **a captura de janela anexada no macOS** (C2/C3). 767 testes passando
-(653 + 46 + 40 + 28).
+Último commit: **RF-097 — o laço encerra a si mesmo quando a janela anexada some**.
+770 testes passando (653 + 46 + 40 + 31).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -661,6 +661,12 @@ com o VS Code por cima do Safari:
 É exatamente para isso que o modo existe. O seletor lista as janelas reais com nome de
 aplicativo, título e tamanho, e `Exists` distingue uma janela viva de uma inventada — que é
 como RF-090 descobre que o usuário fechou o jogo.
+
+**RF-097 — o laço encerra a si mesmo.** Quando a janela anexada deixa de existir, o laço
+TERMINA em vez de dormir: o término da thread é o sinal que a interface usa para saber que a
+tradução parou (RF-009), e é por ele que o modo é desativado. A verificação é uma vez por
+CICLO, não por captura — o custo é uma consulta ao sistema, e fazê-la por região a
+multiplicaria pelo número de áreas.
 
 ## Decisões registradas
 

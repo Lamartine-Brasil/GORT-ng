@@ -35,10 +35,83 @@ public class TranslationLoopTests
             SideEffects = _ => probe.SideEffects++,
             FlushMemory = () => probe.Flushes++,
             CycleIntervalMs = () => intervalMs,
+            SourceStillValid = () => probe.SourceValid,
             Stopped = () => probe.Stops++,
         };
 
         return (new TranslationLoop(host), probe);
+    }
+
+    /// <summary>
+    /// RF-097 — Quando a fonte de imagem deixa de existir — a janela anexada foi fechada —,
+    /// o laço ENCERRA A SI MESMO.
+    ///
+    /// Ele termina, e não dorme: o término da thread é o sinal que a interface usa para
+    /// saber que a tradução parou (RF-009), e é por ele que o modo é desativado.
+    /// </summary>
+    [Fact]
+    public void RF_097_a_fonte_que_some_encerra_o_laco()
+    {
+        var (loop, probe) = Build();
+
+        probe.SourceValid = false;
+        Assert.True(loop.Start(LoopMode.Realtime));
+
+        Assert.True(SpinUntil(() => loop.State == LoopState.Idle, TimeSpan.FromSeconds(2)));
+        Assert.Equal(0, probe.Cycles);
+        Assert.Contains(probe.Errors, e => e == TranslationLoop.SourceGoneMessage);
+    }
+
+    /// <summary>
+    /// RF-097 — E a fonte que some NO MEIO encerra do mesmo jeito: a verificação é por
+    /// ciclo, não só na entrada.
+    /// </summary>
+    [Fact]
+    public void RF_097_a_fonte_que_some_no_meio_tambem_encerra()
+    {
+        var (loop, probe) = Build();
+
+        Assert.True(loop.Start(LoopMode.Realtime));
+        Assert.True(SpinUntil(() => probe.Cycles > 0, TimeSpan.FromSeconds(2)));
+
+        probe.SourceValid = false;
+
+        Assert.True(SpinUntil(() => loop.State == LoopState.Idle, TimeSpan.FromSeconds(2)));
+        Assert.Equal(1, probe.Stops);
+    }
+
+    /// <summary>Sem verificação de fonte, o laço roda normalmente — é o caso da tela.</summary>
+    [Fact]
+    public void Sem_verificacao_de_fonte_o_laco_roda_normalmente()
+    {
+        var probe = new LoopProbe();
+        var host = new LoopHost
+        {
+            Areas = () => probe.Areas,
+            Settings = () => null!,
+            RunCycle = (_, _) => { probe.Cycles++; return Task.FromResult(probe.NextResult()); },
+            HasTranslationWindow = () => true,
+            Draw = _ => probe.Draws++,
+            CycleIntervalMs = () => 0,
+            Stopped = () => probe.Stops++,
+        };
+
+        using var loop = new TranslationLoop(host);
+        Assert.True(loop.Start(LoopMode.OneShot));
+        Assert.True(SpinUntil(() => loop.State == LoopState.Idle, TimeSpan.FromSeconds(2)));
+
+        Assert.True(probe.Cycles > 0);
+    }
+
+    private static bool SpinUntil(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition()) return true;
+            Thread.Sleep(5);
+        }
+        return condition();
     }
 
     private sealed class LoopProbe
@@ -52,6 +125,9 @@ public class TranslationLoopTests
         };
 
         public bool HasWindow { get; set; } = true;
+
+        /// <summary>RF-097 — a fonte de imagem ainda existe.</summary>
+        public volatile bool SourceValid = true;
         public int Cycles, Draws, Repaints, Copies, SideEffects, Flushes, Stops;
         public List<string> Drawn { get; } = new();
         public List<string> Errors { get; } = new();
