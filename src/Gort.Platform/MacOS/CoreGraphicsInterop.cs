@@ -44,6 +44,7 @@ internal static partial class CoreGraphics
 
     internal const uint ListOptionOnScreenOnly = 1u << 0;
     internal const uint ListOptionOnScreenBelowWindow = 1u << 2;
+    internal const uint ListOptionIncludingWindow = 1u << 3;
     internal const uint ListExcludeDesktopElements = 1u << 4;
 
     internal const uint ImageDefault = 0;
@@ -102,6 +103,27 @@ internal static partial class CoreGraphics
                                                          uint listOption,
                                                          uint windowId,
                                                          uint imageOption);
+
+    /// <summary>
+    /// C3 — Enumera as janelas do sistema.
+    ///
+    /// Devolve um CFArray de CFDictionary. CFArray e CFDictionary são "toll-free bridged"
+    /// com NSArray e NSDictionary, então a leitura usa as mesmas mensagens do Objective-C
+    /// que o resto da camada já usa — não é preciso um segundo conjunto de interop para o
+    /// CoreFoundation.
+    /// </summary>
+    [LibraryImport(Lib)]
+    internal static partial nint CGWindowListCopyWindowInfo(uint option, uint relativeToWindow);
+
+    // Chaves do dicionário de informação de janela. O VALOR de cada constante do sistema é
+    // o próprio nome dela, então criá-las como cadeia literal é exato — e evita ter de
+    // resolver símbolos exportados a partir do framework.
+    internal const string WindowNumberKey = "kCGWindowNumber";
+    internal const string WindowNameKey = "kCGWindowName";
+    internal const string WindowOwnerNameKey = "kCGWindowOwnerName";
+    internal const string WindowBoundsKey = "kCGWindowBounds";
+    internal const string WindowLayerKey = "kCGWindowLayer";
+    internal const string WindowPidKey = "kCGWindowOwnerPID";
 
     [LibraryImport(Lib)]
     internal static partial nuint CGImageGetWidth(nint image);

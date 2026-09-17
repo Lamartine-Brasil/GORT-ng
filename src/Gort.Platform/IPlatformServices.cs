@@ -32,6 +32,14 @@ public interface IPlatformServices : IDisposable
     /// <summary>C5, C7 e C8 — Efeitos de janela alternáveis em tempo de execução.</summary>
     IWindowEffects WindowEffects { get; }
 
+    /// <summary>
+    /// C3 / RF-089 — O seletor de janelas capturáveis.
+    ///
+    /// Onde C3 não existe, a implementação responde que não sabe e explica por quê; quem
+    /// pergunta não precisa saber em que sistema está (RF-577).
+    /// </summary>
+    Capture.IWindowEnumerator Windows { get; }
+
     /// <summary>Posição do cursor, para a área de OCR que segue o mouse (RF-454).</summary>
     Input.ICursorPosition Cursor { get; }
 
@@ -105,6 +113,8 @@ internal sealed class UnsupportedPlatformServices : IPlatformServices
         "Este sistema operacional ainda não tem implementação da camada de plataforma.");
 
     public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
+    public Capture.IWindowEnumerator Windows { get; } =
+        new Capture.NoWindowEnumerator("Sistema não suportado.");
 
     public Input.ICursorPosition Cursor { get; } = new Input.NoCursorPosition();
 

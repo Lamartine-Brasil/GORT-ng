@@ -27,17 +27,17 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        643 testes
-    ├── Gort.Platform.Tests/     39 testes
+    ├── Gort.Core.Tests/        653 testes
+    ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
     └── cases/grouping/         casos de agrupamento gravados em arquivo (Etapa 6)
 ```
 
-## Onde parei — 5 de setembro de 2026
+## Onde parei — 17 de setembro de 2026
 
-Último commit: **verificação de ponta a ponta do build atual**, com um diálogo de jogo real
-— 240 ms, 80% do orçamento de P-05. 750 testes passando (643 + 39 + 40 + 28).
+Último commit: **a captura de janela anexada no macOS** (C2/C3). 767 testes passando
+(653 + 46 + 40 + 28).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -47,7 +47,6 @@ O que resta depende de coisas de fora desta máquina:
 - **Atualização automática** — RF-416 a RF-435: servidor de distribuição.
 - **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
   servidor da comunidade, navegador embutido.
-- **Captura de janela anexada** — C2/C3, RF-089 a RF-097, não implementadas no macOS.
 - **Motores de OCR clássico, de nuvem e por ambiente interpretado** — as regras estão
   prontas; faltam os SDKs.
 - **Atalhos globais** — a lógica está verificada; falta conceder a permissão de
@@ -80,6 +79,7 @@ O que resta depende de coisas de fora desta máquina:
 | **17b — Opções avançadas (V.3)** | RF-302 a RF-307, RF-447, RF-523 a RF-532, RF-545, RF-546 | **Completa e verificada** pelas sete abas renderizadas fora da tela. |
 | **17 — Interface completa** | RF-481 a RF-546, RF-054 a RF-064, RF-250 a RF-253 | **Completa.** As sete abas de V.3 e as seis janelas de V.4 que não dependem de serviços externos, todas verificadas em imagem. |
 | **19 — Endurecimento** | RF-001 a RF-003, RF-086, RF-087, RF-552 a RF-567, PARTE VIII | **Completa.** Instância única verificada na máquina, liberação das imagens de região, indicador de memória detalhado, aviso de mudança de monitor, robustez e evolução travadas por teste — inclusive uma varredura do código-fonte para RF-567 — e a PARTE VIII conferida linha a linha. |
+| **16b — Janela anexada (C2/C3)** | RF-089 a RF-097 | **Completa e verificada na máquina:** o seletor lista as janelas reais e a captura lê uma janela COBERTA. |
 | **15 — API personalizada** | RF-292 a RF-301, RF-306, RF-307 | **Completa.** É o único serviço da PARTE VI que não depende de credencial de terceiro: quem fornece o endereço é o usuário. |
 
 Também prontos, transversais a tudo:
@@ -104,7 +104,6 @@ Também prontos, transversais a tudo:
 
 Lacunas conhecidas, fora da ordem de construção:
 
-- **Captura de janela anexada** (C2/C3, RF-089 a RF-097) — não implementada no macOS.
 - **Motores de OCR clássico, de nuvem e por ambiente interpretado** — dependem de SDKs e
   credenciais que não há como exercitar aqui; as regras estão prontas.
 - **Atalhos globais** — a lógica está verificada, mas o registro no sistema depende da
@@ -632,6 +631,36 @@ um passo de diferença em cada canal. O fundo escuro da caixa também foi extra�
 
 E o tamanho de fonte de RF-360 🔒 saiu igual ao preferido nos três blocos: nenhum precisou
 de bissecção, o que é o esperado quando a tradução cabe no espaço do original.
+
+## A janela anexada (C2 / C3)
+
+A lacuna que ficou aberta desde a Etapa 16 — "não implementada no macOS" — fechou. O
+CoreGraphics já tinha o que faltava; o que não havia era o contrato.
+
+- `Capture/WindowEnumeration.cs` — C3 atrás da abstração de RF-577. O identificador de
+  janela é OPACO de propósito: cada sistema o representa de um jeito, e nada acima da
+  abstração deve interpretá-lo.
+- `MacOS/MacWindowEnumerator.cs` — `CGWindowListCopyWindowInfo`. CFArray e CFDictionary são
+  *toll-free bridged* com NSArray e NSDictionary, então a leitura usa as mesmas mensagens do
+  Objective-C que o resto da camada já usa — não foi preciso um segundo conjunto de interop
+  para o CoreFoundation.
+- `MacCaptureBackend.CaptureAttached` — C2, com `ListOptionIncludingWindow`. A imagem sai do
+  conteúdo DAQUELA janela, e não da região da tela onde ela está.
+- `Regions/AttachedFrameBuffer.cs` — RF-093 a RF-096 🔒, no núcleo e testado com relógio
+  controlado: P-17 quadros em reserva, um a cada P-18 sem pedido, P-19 de idade máxima,
+  nova tentativa a cada P-20.
+
+**Verificado na máquina, e a imagem é a prova.** O mesmo retângulo, capturado de dois jeitos
+com o VS Code por cima do Safari:
+
+| caminho | o que saiu |
+|---|---|
+| captura de tela | a janela do VS Code, que estava por cima |
+| janela anexada ao Safari | a janela do Safari, limpa, sem nada por cima |
+
+É exatamente para isso que o modo existe. O seletor lista as janelas reais com nome de
+aplicativo, título e tamanho, e `Exists` distingue uma janela viva de uma inventada — que é
+como RF-090 descobre que o usuário fechou o jogo.
 
 ## Decisões registradas
 

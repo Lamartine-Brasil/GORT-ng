@@ -178,6 +178,9 @@ internal sealed class WindowsPlatformServices : IPlatformServices
     /// </summary>
     public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
 
+    public Capture.IWindowEnumerator Windows { get; } = new Capture.NoWindowEnumerator(
+        "O seletor de janelas do Windows ainda não está implementado.");
+
     public Gort.Platform.Input.ICursorPosition Cursor { get; } =
         new Gort.Platform.Input.NoCursorPosition();
 

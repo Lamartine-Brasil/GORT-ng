@@ -38,6 +38,9 @@ internal sealed class MacPlatformServices : IPlatformServices
     public IMonitorProvider Monitors { get; }
     public Gort.Platform.Input.IGlobalKeyboardHook Keyboard { get; }
     public IWindowEffects WindowEffects { get; } = new MacWindowEffects();
+
+    /// <summary>C3 — O seletor de janelas (RF-089).</summary>
+    public IWindowEnumerator Windows { get; } = new MacWindowEnumerator();
     public Gort.Platform.Input.ICursorPosition Cursor { get; } = new MacCursorPosition();
     public Gort.Platform.Input.ITextToSpeech Speech { get; } = new MacTextToSpeech();
 
@@ -57,12 +60,11 @@ internal sealed class MacPlatformServices : IPlatformServices
                      Capability.WindowPicker,
                  })
         {
+            // As três dependem da MESMA permissão: `CGWindowListCreateImage` serve tanto
+            // para uma região da tela (C1) quanto para uma janela específica (C2), e
+            // `CGWindowListCopyWindowInfo` só devolve os títulos com ela (C3).
             list.Add(screenRecording
-                ? (c == Capability.ScreenRegionCapture
-                    ? CapabilityStatus.Ok(c)
-                    : CapabilityStatus.Missing(c, UnavailabilityKind.NotSupported,
-                        "A captura de uma janela específica ainda não está implementada no " +
-                        "macOS. Use a captura de tela."))
+                ? CapabilityStatus.Ok(c)
                 : CapabilityStatus.Missing(c, UnavailabilityKind.PermissionRequired,
                     "O macOS exige permissão de Gravação de Tela para que o programa possa " +
                     "ler os pixels da tela. Sem ela nenhuma tradução é possível.",

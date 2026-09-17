@@ -179,6 +179,7 @@ public partial class MainWindow : Window
         ShortcutsLabel.Text = _loc["other.shortcuts"];
         AdvancedButton.Content = _loc["other.advanced"];
         DictionaryEditorButton.Content = _loc["dict.title"];
+        WindowPickerButton.Content = _loc["picker_window.title"];
         KeysButton.Content = _loc["keys.title"];
         AboutButton.Content = _loc["about.title"];
         HelpLabel.Text = _loc["other.help"];
@@ -333,6 +334,9 @@ public partial class MainWindow : Window
 
         AdvancedButton.Click += (_, _) => OpenAdvancedOptions();
         DictionaryEditorButton.Click += (_, _) => OpenDictionaryEditor();
+
+        // RF-089 — o seletor de janelas do modo janela anexada.
+        WindowPickerButton.Click += (_, _) => OpenWindowPicker();
 
         // RF-538 — o rodízio de chaves do serviço ativo.
         KeysButton.Click += (_, _) =>
@@ -1211,6 +1215,47 @@ public partial class MainWindow : Window
                 OpenDictionaryEditor();
                 break;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // C2 / C3 — RF-089 a RF-091: modo janela anexada
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private WindowPickerWindow? _windowPicker;
+
+    /// <summary>
+    /// RF-089 — Abre o seletor de janelas.
+    ///
+    /// A troca de janela anexada passa pelo protocolo de pausa de RF-012: mudar a fonte da
+    /// imagem no meio de um ciclo faria o ciclo em curso ler de um lugar e desenhar com as
+    /// coordenadas de outro.
+    /// </summary>
+    private void OpenWindowPicker()
+    {
+        if (_windowPicker is not null) { _windowPicker.Activate(); return; }
+
+        var window = new WindowPickerWindow(
+            _loc, _session.Platform.Windows, _session.ShowCaptureBorder,
+            // RF-091 — no macOS a borda é desenhada pelo sistema e não há como desligá-la.
+            borderCanBeHidden: !OperatingSystem.IsMacOS())
+        {
+            BorderChanged = value => _session.ShowCaptureBorder = value,
+        };
+
+        window.Attached = alvo =>
+        {
+            var result = _loop.PauseAndResume(() => _session.AttachToWindow(alvo));
+
+            if (result == ApplyResult.Aborted) { Say("msg.loop_stop_failed"); return; }
+
+            Say(alvo is null
+                ? _loc["picker_window.state_stopped"]
+                : _loc.Format("picker_window.state_capturing", alvo.DisplayName));
+        };
+
+        _windowPicker = window;
+        window.Closed += (_, _) => _windowPicker = null;
+        window.Show(this);
     }
 
     /// <summary>

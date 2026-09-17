@@ -262,4 +262,82 @@ Console.WriteLine();
     }
 }
 
+// ── C3 / RF-089 — o seletor de janelas ─────────────────────────────────────
+Console.WriteLine();
+Console.WriteLine("Janelas capturáveis (C3 / RF-089)");
+Console.WriteLine(new string('─', 78));
+
+var janelas = platform.Windows;
+if (!janelas.IsAvailable)
+{
+    Console.WriteLine($"  indisponível: {janelas.UnavailableReason}");
+}
+else
+{
+    var lista = janelas.List();
+    Console.WriteLine($"  {lista.Count} janela(s)");
+
+    foreach (var j in lista.Take(12))
+        Console.WriteLine($"    #{j.Id,-7} {j.Bounds,-22} {j.DisplayName}");
+
+    // RF-090 / RF-097 — a existência é perguntada antes de cada captura.
+    if (lista.Count > 0)
+    {
+        Console.WriteLine($"  existe #{lista[0].Id}? {janelas.Exists(lista[0].Id)}");
+        Console.WriteLine($"  existe #999999? {janelas.Exists(999999)}");
+    }
+
+    // ── C2 — capturar uma janela COBERTA ────────────────────────────────────
+    //
+    // É a razão de o recurso existir: a última janela da lista é a mais ao fundo, e
+    // capturá-la pela região da tela traria o que está por cima dela.
+    if (lista.Count > 0 && platform.Capture.Supports(CaptureSource.AttachedWindow) is false)
+    {
+        // A fonte só fica utilizável depois de anexada; anexamos e perguntamos de novo.
+        var alvo = lista[^1];
+        platform.Capture.AttachToWindow(alvo.Id, alvo.Bounds.X, alvo.Bounds.Y);
+
+        Console.WriteLine();
+        Console.WriteLine($"C2 — capturando #{alvo.Id} \"{alvo.DisplayName}\"");
+        Console.WriteLine($"  fonte utilizável depois de anexar: "
+                          + $"{platform.Capture.Supports(CaptureSource.AttachedWindow)}");
+
+        var pedaco = new Gort.Core.Model.Rect(
+            alvo.Bounds.X, alvo.Bounds.Y,
+            Math.Min(700, alvo.Bounds.Width), Math.Min(400, alvo.Bounds.Height));
+
+        var anexada = platform.Capture.Capture(new CaptureRequest
+        {
+            Rects = new[] { pedaco },
+            Source = CaptureSource.AttachedWindow,
+        });
+
+        if (anexada.Count == 0)
+        {
+            Console.WriteLine("  a janela não produziu imagem.");
+        }
+        else
+        {
+            string arquivo = Path.Combine(outputDir, "janela-anexada.png");
+            PngWriter.Save(anexada[0].Image, arquivo);
+            Console.WriteLine($"  {anexada[0].Image.Width}x{anexada[0].Image.Height}, "
+                              + $"origem do cliente {anexada[0].ClientOrigin} → janela-anexada.png");
+        }
+
+        // A mesma região pela captura de TELA, para comparar: aqui o que está por cima
+        // aparece, e é justamente o que C2 evita.
+        var daTela = platform.Capture.Capture(new CaptureRequest
+        {
+            Rects = new[] { pedaco },
+            Source = CaptureSource.Screen,
+        });
+
+        if (daTela.Count > 0)
+        {
+            PngWriter.Save(daTela[0].Image, Path.Combine(outputDir, "janela-pela-tela.png"));
+            Console.WriteLine("  a mesma região pela tela → janela-pela-tela.png");
+        }
+    }
+}
+
 return 0;

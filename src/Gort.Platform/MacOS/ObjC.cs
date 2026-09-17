@@ -61,6 +61,33 @@ internal static partial class ObjC
     [DllImport(Lib, EntryPoint = "objc_msgSend")]
     internal static extern nuint SendCount(nint receiver, nint selector);
 
+    /// <summary>Para `intValue` de um NSNumber.</summary>
+    [DllImport(Lib, EntryPoint = "objc_msgSend")]
+    internal static extern int SendInt(nint receiver, nint selector);
+
+    /// <summary>
+    /// Para `doubleValue` de um NSNumber. A declaração é separada para que o marshaller
+    /// escolha o registrador de ponto flutuante em vez do de inteiros.
+    /// </summary>
+    [DllImport(Lib, EntryPoint = "objc_msgSend")]
+    internal static extern double SendDouble(nint receiver, nint selector);
+
+    /// <summary>`objectForKey:` de um NSDictionary — ou de um CFDictionary, que é o mesmo.</summary>
+    internal static nint DictionaryValue(nint dictionary, string key)
+    {
+        if (dictionary == nint.Zero) return nint.Zero;
+
+        nint name = NSString(key);
+        try
+        {
+            return Send(dictionary, sel_registerName("objectForKey:"), name);
+        }
+        finally
+        {
+            Release(name);
+        }
+    }
+
     // ── Objetos comuns ───────────────────────────────────────────────────────
 
     internal static nint New(string className)

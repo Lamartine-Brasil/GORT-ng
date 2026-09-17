@@ -180,6 +180,11 @@ static void RenderAuxiliaryWindows(Localizer loc, string outputDir)
     Capture(new Gort.App.Windows.KeyManagerWindow(loc, keys, ""),
             "janela-chaves.png", outputDir);
 
+    // RF-089 — seletor de janelas, com os três estados.
+    var janelas = Gort.Platform.PlatformServices.Create().Windows;
+    Capture(new Gort.App.Windows.WindowPickerWindow(loc, janelas, false, false),
+            "janela-seletor.png", outputDir);
+
     // RF-543 — sobre.
     Capture(new Gort.App.Windows.AboutWindow(loc, new[] { ("myDic.txt", 128) }),
             "janela-sobre.png", outputDir);

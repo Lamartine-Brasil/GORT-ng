@@ -244,6 +244,10 @@ internal sealed class LinuxPlatformServices : IPlatformServices
     /// </summary>
     public IWindowEffects WindowEffects { get; } = new NoWindowEffects();
 
+    public Capture.IWindowEnumerator Windows { get; } = new Capture.NoWindowEnumerator(
+        "A enumeração de janelas no Linux depende do gerenciador de janelas e do protocolo " +
+        "gráfico; não há caminho único que valha em X11 e Wayland.");
+
     public Gort.Platform.Input.ICursorPosition Cursor { get; } =
         new Gort.Platform.Input.NoCursorPosition();
 

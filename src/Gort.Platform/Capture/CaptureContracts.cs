@@ -97,6 +97,18 @@ public interface ICaptureBackend : IDisposable
     /// Chamado quando as janelas do programa são criadas.
     /// </summary>
     void ExcludeOwnWindow(nint windowHandle);
+
+    /// <summary>
+    /// C2 / RF-089 — Anexa a captura a uma janela escolhida pelo usuário. Zero desanexa.
+    ///
+    /// RF-092 — a origem vem dos limites do quadro da janela, e não do retângulo simples:
+    /// sombras e bordas invisíveis deslocariam todo o alinhamento da sobreposição.
+    ///
+    /// Onde C2 não existe, a implementação ignora a chamada — a fonte já se declarou não
+    /// suportada em <see cref="Supports"/>, e quem pergunta não precisa de dois jeitos de
+    /// descobrir a mesma coisa.
+    /// </summary>
+    void AttachToWindow(ulong windowId, int originX, int originY) { }
 }
 
 /// <summary>
@@ -119,6 +131,10 @@ public sealed class ScreenCapture
     public bool Supports(CaptureSource source) => _backend.Supports(source);
 
     public void ExcludeOwnWindow(nint handle) => _backend.ExcludeOwnWindow(handle);
+
+    /// <summary>C2 / RF-089 — Anexa a captura a uma janela; zero desanexa.</summary>
+    public void AttachToWindow(ulong windowId, int originX, int originY)
+        => _backend.AttachToWindow(windowId, originX, originY);
 
     /// <summary>
     /// 6.2 — Captura todos os retângulos da requisição.

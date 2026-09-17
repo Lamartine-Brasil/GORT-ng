@@ -125,6 +125,30 @@ public sealed class AppSession : IDisposable
     /// <summary>RF-554 / RF-559 — Imagens de região vivas neste instante.</summary>
     public LiveImageMeter ImageMeter { get; } = new();
 
+    /// <summary>
+    /// C2 / RF-089 — A janela anexada, quando há uma.
+    ///
+    /// NÃO é persistida no perfil, ao contrário das áreas (RF-066): o identificador de uma
+    /// janela não sobrevive ao fechamento dela, e restaurar um identificador morto na
+    /// abertura seguinte faria o programa começar capturando nada.
+    /// </summary>
+    public Gort.Platform.Capture.CapturableWindow? AttachedWindow { get; private set; }
+
+    /// <summary>RF-091 — Exibir a borda que o sistema desenha na janela capturada.</summary>
+    public bool ShowCaptureBorder { get; set; }
+
+    /// <summary>
+    /// RF-089 / RF-090 — Anexa a captura a uma janela; nulo desanexa e devolve o modo à
+    /// captura de tela.
+    /// </summary>
+    public void AttachToWindow(Gort.Platform.Capture.CapturableWindow? window)
+    {
+        AttachedWindow = window;
+
+        Platform.Capture.AttachToWindow(
+            window?.Id ?? 0, window?.Bounds.X ?? 0, window?.Bounds.Y ?? 0);
+    }
+
     /// <summary>RF-302 — Presets de API personalizada, das duas fontes.</summary>
     public ApiPresetStore ApiPresets { get; private set; } = null!;
 
@@ -317,6 +341,14 @@ public sealed class AppSession : IDisposable
                 Scale = Profile.Scale,
                 Groups = Profile.ColorGroups.Select(g => g.Clone()).ToList(),
             },
+            // RF-088 — a fonte da imagem. A janela anexada tem precedência sobre a janela
+            // ativa: ela é uma escolha explícita do usuário, e a outra é uma preferência.
+            Source = AttachedWindow is not null
+                ? Gort.Platform.Capture.CaptureSource.AttachedWindow
+                : Profile.CaptureActiveWindow
+                    ? Gort.Platform.Capture.CaptureSource.ActiveWindow
+                    : Gort.Platform.Capture.CaptureSource.Screen,
+
             MergeLines = Advanced.MergeLines,
             Text = new TextProcessingOptions
             {

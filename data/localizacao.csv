@@ -393,3 +393,16 @@ msg.areas_invalid,"A disposição dos monitores mudou e as áreas {0} ficaram fo
 
 # ─── PARTE VIII — o que o programa precisa documentar ────────────────────────
 ui.fullscreen,"Jogo em tela cheia exclusiva não funciona: a sobreposição não pode ser desenhada por cima e a captura pode falhar. Use o jogo em modo janela ou em janela sem borda."
+
+# ─── C3 / RF-089 a RF-091 — seletor de janelas ───────────────────────────────
+picker_window.title,Janela a capturar
+picker_window.attach,Capturar esta janela
+picker_window.stop,Parar
+picker_window.refresh,Atualizar lista
+picker_window.close,Fechar
+picker_window.border,Exibir a borda amarela que o sistema desenha
+picker_window.border_fixed,"Este sistema não permite desativar a borda; ela aparece sempre que uma janela está sendo capturada."
+picker_window.state_selecting,Selecionando — escolha uma janela na lista.
+picker_window.state_capturing,"Capturando {0}"
+picker_window.state_stopped,Parado — a captura voltou a ler a tela.
+picker_window.state_closed,"{0} foi fechada. A captura parou e o modo foi desativado."
