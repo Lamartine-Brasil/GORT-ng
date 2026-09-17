@@ -369,6 +369,9 @@ public sealed class AppSession : IDisposable
                 ServiceIsLocalDatabase = info.Key == "localdb",
                 NumberAreas = Profile.NumberAreas,
 
+                // RF-146 — a propriedade da escrita, distinta da opção do usuário.
+                SeparatesWordsBySpace = source.SeparatesWordsBySpace,
+
                 // RF-491 — "traduzir uma linha por vez" desativa o agrupamento em blocos.
                 OneLinePerTranslation = Debug.Enabled && Debug.OneLinePerTranslation,
             },

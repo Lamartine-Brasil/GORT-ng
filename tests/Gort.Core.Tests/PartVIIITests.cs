@@ -305,3 +305,55 @@ public class SecondNetworkBarrierTests
         Assert.Equal(2, service.Calls);
     }
 }
+
+/// <summary>RF-146 — A escrita do idioma informa as regras de correção de texto.</summary>
+public class ScriptAwareJoinTests
+{
+    private static TextProcessingOptions Options(bool separates, bool removeSpaces) => new()
+    {
+        SeparatesWordsBySpace = separates,
+        RemoveSpaces = removeSpaces,
+        WindowMode = WindowMode.Dark,
+    };
+
+    /// <summary>
+    /// RF-185 — Numa escrita que separa palavras por espaço, as linhas juntam-se COM espaço:
+    /// sem ele, a última palavra de uma linha grudaria na primeira da seguinte.
+    /// </summary>
+    [Fact]
+    public void Numa_escrita_com_espacos_as_linhas_juntam_com_espaco()
+    {
+        string joined = TextPostProcessor.JoinLineBreaks(
+            "the gate has\nbeen sealed", Options(separates: true, removeSpaces: false));
+
+        Assert.Equal("the gate has been sealed", joined);
+    }
+
+    /// <summary>
+    /// RF-146 — Numa escrita que NÃO separa palavras por espaço, juntam-se sem nada. Inserir
+    /// um espaço ali põe um caractere que não existe naquela escrita, e o tradutor recebe
+    /// uma palavra partida ao meio.
+    /// </summary>
+    [Fact]
+    public void RF_146_numa_escrita_sem_espacos_as_linhas_juntam_sem_nada()
+    {
+        string joined = TextPostProcessor.JoinLineBreaks(
+            "門は百年\n閉ざされている", Options(separates: false, removeSpaces: true));
+
+        Assert.Equal("門は百年閉ざされている", joined);
+    }
+
+    /// <summary>
+    /// RF-146 — E a escolha é da ESCRITA, não da opção do usuário: ele pode desligar a
+    /// remoção de espaços e continuar lendo japonês. Antes desta correção, a junção passava
+    /// a usar espaço nesse caso e partia palavras ao meio para o tradutor.
+    /// </summary>
+    [Fact]
+    public void RF_146_desligar_a_remocao_de_espacos_nao_muda_a_escrita()
+    {
+        string joined = TextPostProcessor.JoinLineBreaks(
+            "門は百年\n閉ざされている", Options(separates: false, removeSpaces: false));
+
+        Assert.Equal("門は百年閉ざされている", joined);
+    }
+}

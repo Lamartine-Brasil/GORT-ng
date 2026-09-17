@@ -119,6 +119,15 @@ public sealed class MacVisionOcr : IOcrEngine
 
             requests = ObjC.NSArray(request);
 
+            // RF-138 — "o motor do sistema opera de forma assíncrona: disponibilizar a
+            // imagem, disparar o reconhecimento, e esperar em passos de P-31 até que ele
+            // volte ao estado disponível".
+            //
+            // Aqui não há espera nenhuma, e isso cumpre o requisito. `performRequests:` do
+            // Vision é SÍNCRONO: ele retorna com os resultados prontos. A sondagem de P-31
+            // que RF-138 descreve é o remédio para APIs que devolvem uma operação pendente —
+            // é o caso do reconhecedor do Windows, não deste. Sondar um resultado que já
+            // chegou só acrescentaria latência.
             bool ok = ObjC.SendBoolResult(handler, ObjC.sel_registerName("performRequests:error:"),
                                           requests, nint.Zero);
             if (!ok) return OcrResult.Empty;

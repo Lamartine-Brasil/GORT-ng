@@ -19,6 +19,16 @@ public sealed class TextProcessingOptions
     /// <summary>RF-180 — Remove TODOS os espaços do texto reconhecido, antes de tudo.</summary>
     public bool RemoveSpaces { get; set; }
 
+    /// <summary>
+    /// RF-146 — O idioma ativo separa palavras por espaço.
+    ///
+    /// Vem da PROPRIEDADE do idioma (RF-311), e não do identificador nem da opção de
+    /// remoção de espaços: a opção é do usuário e ele pode desligá-la, mas a escrita não
+    /// muda por isso. Juntar duas linhas de japonês com um espaço insere um caractere que
+    /// não existe naquela escrita, e o tradutor recebe uma palavra partida ao meio.
+    /// </summary>
+    public bool SeparatesWordsBySpace { get; set; } = true;
+
     /// <summary>RF-181 — Aplica o dicionário de correção antes da tradução.</summary>
     public bool UseDictionary { get; set; }
 
@@ -96,7 +106,10 @@ public static class TextPostProcessor
         if (options.OneLinePerTranslation) return text;
         if (options.ServiceIsLocalDatabase) return text;
 
-        string replacement = options.RemoveSpaces ? "" : " ";
+        // RF-146 — a escolha entre espaço e nada é da ESCRITA, não da opção do usuário: ele
+        // pode desligar a remoção de espaços e continuar lendo japonês, e aí juntar as
+        // linhas com espaço partiria palavras ao meio para o tradutor.
+        string replacement = options.SeparatesWordsBySpace && !options.RemoveSpaces ? " " : "";
         return text.Replace("\r\n", replacement)
                    .Replace("\r", replacement)
                    .Replace("\n", replacement);

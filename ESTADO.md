@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        676 testes
+    ├── Gort.Core.Tests/        679 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,10 +36,12 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **a segunda barreira antes da rede** (RF-201). 794 testes passando
-(676 + 46 + 40 + 32).
+Último commit: **RF-146 — a escrita informa as regras de correção**. 797 testes
+passando (679 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 59**.
+A varredura por requisitos nunca citados no código saiu de **92 para 57**, e os que
+restam são serviços com credencial, atualização automática e janelas que dependem de
+servidores que não existem.
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -860,6 +862,25 @@ mais barata que a comparação.
 - **RF-505** — o mesmo vale para a escala de DPI: o Avalonia mede em unidades independentes
   de dispositivo, então as abas já nascem com o tamanho certo em qualquer tela. O requisito
   nomeia um ajuste que só é preciso onde o tamanho é dado em pixels.
+
+## RF-146 — a escrita, não a opção do usuário
+
+O requisito manda informar ao pré-processamento se o idioma ativo é de escrita não latina,
+"porque isso muda regras de correção de texto".
+
+Isso já acontecia por acidente: a junção de linhas usava a opção de REMOÇÃO DE ESPAÇOS para
+decidir entre juntar com espaço ou sem nada, e essa opção costuma acompanhar a escrita
+(RF-148). Mas ela é do usuário, e ele pode desligá-la e continuar lendo japonês — e aí a
+junção passava a usar espaço, partindo palavras ao meio para o tradutor.
+
+Agora a escolha vem da **propriedade do idioma** (RF-311), separada da opção. Três testes
+fixam os três casos, incluindo o que estava errado.
+
+**RF-138** — "o motor do sistema opera de forma assíncrona; esperar em passos de P-31 até que
+ele volte ao estado disponível". Aqui não há espera nenhuma, e isso cumpre o requisito:
+`performRequests:` do Vision é SÍNCRONO e retorna com os resultados prontos. A sondagem que
+RF-138 descreve é o remédio para APIs que devolvem uma operação pendente — o reconhecedor do
+Windows, não este. Sondar um resultado que já chegou só acrescentaria latência.
 
 ## Decisões registradas
 
