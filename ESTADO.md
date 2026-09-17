@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        679 testes
+    ├── Gort.Core.Tests/        701 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,19 +36,20 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **RF-146 — a escrita informa as regras de correção**. 797 testes
-passando (679 + 46 + 40 + 32).
+Último commit: **as decisões da atualização automática** (RF-420 a RF-431).
+819 testes passando (701 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 57**, e os que
-restam são serviços com credencial, atualização automática e janelas que dependem de
-servidores que não existem.
+A varredura por requisitos nunca citados no código saiu de **92 para 49**.
 
 O que resta depende de coisas de fora desta máquina:
 
 - **Sete dos nove serviços de tradução** (RF-255 a RF-291) — credenciais que só o usuário
   tem, ou autenticação por delegação. O rodízio de chaves, os presets, o protocolo de lote e
   a API personalizada já existem; falta o adaptador de cada um.
-- **Atualização automática** — RF-416 a RF-435: servidor de distribuição.
+- **Atualização automática** — falta o TRANSPORTE (RF-416 a RF-419, RF-425 a RF-427,
+  RF-432 a RF-435), que precisa de um servidor de distribuição. As DECISÕES — tipo de
+  atualização, publicação completa, protocolo seguro, soma, período de espera, substituição
+  dos arquivos — já existem e estão testadas.
 - **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
   servidor da comunidade, navegador embutido.
 - **Motores de OCR clássico, de nuvem e por ambiente interpretado** — as regras estão
@@ -882,6 +883,30 @@ ele volte ao estado disponível". Aqui não há espera nenhuma, e isso cumpre o 
 RF-138 descreve é o remédio para APIs que devolvem uma operação pendente — o reconhecedor do
 Windows, não este. Sondar um resultado que já chegou só acrescentaria latência.
 
+## As decisões da atualização (RF-420 a RF-431)
+
+O servidor de distribuição não existe nesta versão, mas as DECISÕES existem e são
+verificáveis sem ele. Quando o servidor existir, o que falta é o transporte.
+
+- **RF-420** — menor ou maior conforme a versão local esteja dentro da faixa declarada. Quem
+  decide a faixa é o SERVIDOR: assim uma mudança de formato que quebre a atualização
+  automática pode ser contornada publicando uma faixa nova, sem depender de quem já instalou.
+  Sem faixa declarada, tudo é maior — na ausência da declaração, o caminho conservador é o
+  que pede confirmação. Versão ilegível de qualquer lado não é atualização: um programa que
+  interpreta lixo como "há versão nova" baixaria qualquer coisa que o servidor devolvesse por
+  engano.
+- **RF-422 🔒** — a publicação incompleta aborta em SILÊNCIO. Os dois artefatos vão para
+  lugares diferentes e há uma janela em que um está novo e o outro não; perguntar nessa janela
+  faria o usuário decidir sobre uma publicação que nem existe ainda.
+- **RF-424** — as URLs são FORÇADAS para protocolo seguro, não recusadas: um servidor que
+  publica em texto claro por descuido não deve impedir a atualização, mas o download não pode
+  sair por ali.
+- **RF-428 🔒 / RF-429** — o período de espera de P-116 depois de uma falha, e o marcador com
+  instante FUTURO tratado como "sem espera": o relógio pode ter sido acertado para trás, e um
+  marcador no futuro bloquearia a atualização por tempo indefinido.
+- **RF-430** — mover com até P-117 tentativas e falhar de forma LIMPA. Um executável meio
+  substituído não abre, e desistir com o antigo intacto é sempre melhor que insistir.
+
 ## Decisões registradas
 
 Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
@@ -1108,6 +1133,12 @@ Pontos onde a especificação deixou a escolha em aberto e onde ela foi feita:
     e aguardar nele a partir do fluxo principal trava. O ciclo passou a ser aguardado por
     `Task.Run(...).GetAwaiter().GetResult()`, que é a mesma razão pela qual RF-009 manda o
     laço de tradução sondar em vez de usar `await`.
+
+38. **Um teste meu assumiu semântica do Windows.** A primeira versão do teste de
+    substituição segurava o arquivo de destino com `FileShare.None` para simular um
+    executável em uso — o que bloqueia no Windows e não no macOS, onde o POSIX deixa mover um
+    arquivo aberto. O teste passava por não estar bloqueando nada. Uma PASTA no lugar do
+    arquivo recusa a substituição nos três sistemas.
 
 ## Como rodar os testes
 
