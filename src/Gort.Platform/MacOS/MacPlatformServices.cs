@@ -228,6 +228,22 @@ internal sealed class MacPlatformServices : IPlatformServices
             }
             Capabilities = Detect(Monitors);
         }
+        else if (capability is Capability.GlobalHotkeys or Capability.ForegroundWindowInfo)
+        {
+            try
+            {
+                // RF-570 — o diálogo do sistema leva o usuário direto ao painel certo, com
+                // o programa já listado nele. Sem isso ele teria de encontrar "Ajustes do
+                // Sistema › Privacidade e Segurança › Acessibilidade" por conta própria e
+                // adicionar o programa à mão.
+                MacInput.RequestAccessibility();
+            }
+            catch
+            {
+                // P8 — a falha ao solicitar não derruba nada.
+            }
+            Capabilities = Detect(Monitors);
+        }
 
         return Capabilities[capability];
     }

@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **RF-097 — o laço encerra a si mesmo quando a janela anexada some**.
-770 testes passando (653 + 46 + 40 + 31).
+Último commit: **RF-569 — a oferta de conceder a permissão**. 770 testes passando
+(653 + 46 + 40 + 31).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -667,6 +667,25 @@ TERMINA em vez de dormir: o término da thread é o sinal que a interface usa pa
 tradução parou (RF-009), e é por ele que o modo é desativado. A verificação é uma vez por
 CICLO, não por captura — o custo é uma consulta ao sistema, e fazê-la por região a
 multiplicaria pelo número de áreas.
+
+## RF-569 — explicar E oferecer
+
+O programa detectava a permissão faltando e explicava, mas nunca OFERECIA: `RequestPermission`
+e `OpenPermissionSettings` existiam na abstração e não eram chamados por ninguém. Explicar
+sem oferecer deixa o usuário com a tarefa de encontrar um painel do sistema cujo nome ele não
+conhece, e adicionar a ele um programa que ainda não está na lista.
+
+A barra de permissão fica no topo da janela principal, com o texto da capacidade que falta,
+o caminho do painel, e dois botões: **conceder** — que no macOS abre o diálogo do sistema
+levando direto ao painel certo, com o programa já listado — e **abrir configuração**.
+
+Só as capacidades que faltam POR PERMISSÃO viram botão. Uma capacidade que o sistema
+simplesmente não tem não vira: não há o que o usuário possa fazer, e um botão que não resolve
+é pior que aviso nenhum.
+
+O aviso de que a permissão só vale a partir da próxima abertura é parte da mensagem: o macOS
+não a aplica ao processo em execução, e sem dizer isso o usuário concede, vê que não
+funcionou, e conclui que o programa está quebrado.
 
 ## Decisões registradas
 

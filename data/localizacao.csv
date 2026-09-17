@@ -406,3 +406,10 @@ picker_window.state_selecting,Selecionando — escolha uma janela na lista.
 picker_window.state_capturing,"Capturando {0}"
 picker_window.state_stopped,Parado — a captura voltou a ler a tela.
 picker_window.state_closed,"{0} foi fechada. A captura parou e o modo foi desativado."
+
+# ─── RF-569 / RF-570 — permissões do sistema ─────────────────────────────────
+permission.grant,Conceder
+permission.settings,Abrir configuração
+permission.granted,Permissão concedida.
+permission.restart_needed,"O sistema só aplica a permissão a partir da próxima abertura do programa. Conceda na janela que abriu e reinicie o GORT."
+permission.no_settings,"Não há tela de configuração para esta permissão neste sistema."

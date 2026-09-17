@@ -968,6 +968,57 @@ public partial class MainWindow : Window
             _session.Notices.Add(_loc.Format("system.unavailable",
                 string.Join("; ", missing.Select(m => CapabilityInfo.Name(m.Capability)))));
         }
+
+        ShowPermissionBar();
+    }
+
+    /// <summary>
+    /// RF-569 — "explicar em texto claro qual permissão falta e para quê, e OFERECER abrir a
+    /// tela de configuração correspondente".
+    ///
+    /// A oferta é o que faltava: explicar sem oferecer deixa o usuário com a tarefa de
+    /// encontrar um painel do sistema cujo nome ele não conhece, e adicionar a ele um
+    /// programa que ainda não está na lista.
+    ///
+    /// Só as capacidades que faltam POR PERMISSÃO entram aqui. Uma capacidade que este
+    /// sistema simplesmente não tem não vira botão: não há o que o usuário possa fazer, e
+    /// um botão que não resolve é pior que aviso nenhum.
+    /// </summary>
+    private void ShowPermissionBar()
+    {
+        var pending = _session.Platform.Capabilities.Unavailable
+            .Where(c => c.Kind == UnavailabilityKind.PermissionRequired)
+            .ToList();
+
+        if (pending.Count == 0) { PermissionBar.IsVisible = false; return; }
+
+        var first = pending[0];
+
+        PermissionText.Text = first.Explanation
+            + (first.RemediationHint is null ? "" : $"  ({first.RemediationHint})");
+
+        PermissionGrantButton.Content = _loc["permission.grant"];
+        PermissionSettingsButton.Content = _loc["permission.settings"];
+
+        PermissionGrantButton.Click += (_, _) =>
+        {
+            var status = _session.Platform.RequestPermission(first.Capability);
+
+            // O macOS não aplica a permissão ao processo já em execução: conceder e esperar
+            // que funcione na hora é a expectativa errada, e dizer isso poupa o usuário de
+            // achar que não funcionou.
+            Say(status.Available
+                ? _loc["permission.granted"]
+                : _loc["permission.restart_needed"]);
+        };
+
+        PermissionSettingsButton.Click += (_, _) =>
+        {
+            if (!_session.Platform.OpenPermissionSettings(first.Capability))
+                Say(_loc["permission.no_settings"]);
+        };
+
+        PermissionBar.IsVisible = true;
     }
 
     /// <summary>RF-569 / RF-028 — Os avisos da inicialização são exibidos UMA VEZ.</summary>

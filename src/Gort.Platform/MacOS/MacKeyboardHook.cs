@@ -21,6 +21,56 @@ internal static partial class MacInput
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool AXIsProcessTrusted();
 
+    /// <summary>
+    /// RF-570 — A mesma verificação, mas PEDINDO: o sistema abre o diálogo que leva o
+    /// usuário direto ao painel certo, com o programa já listado nele.
+    ///
+    /// Só é chamada quando o usuário pede — nunca na inicialização. Um diálogo de permissão
+    /// aparecendo sozinho ao abrir o programa é exatamente o que faz as pessoas recusarem
+    /// sem ler.
+    /// </summary>
+    [LibraryImport(AppServices)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool AXIsProcessTrustedWithOptions(nint options);
+
+    /// <summary>kAXTrustedCheckOptionPrompt — o valor da chave é o próprio nome dela.</summary>
+    internal const string TrustedCheckOptionPrompt = "AXTrustedCheckOptionPrompt";
+
+    /// <summary>
+    /// Pede a permissão de Acessibilidade, mostrando o diálogo do sistema.
+    ///
+    /// Devolve o estado ATUAL, que é quase sempre falso: conceder a permissão exige a ação
+    /// do usuário no painel, e o macOS não a aplica ao processo já em execução. Quem chama
+    /// precisa dizer isso a ele, e não ficar esperando um verdadeiro que não vem.
+    /// </summary>
+    internal static bool RequestAccessibility()
+    {
+        nint dictionary = ObjC.New("NSMutableDictionary");
+        if (dictionary == nint.Zero) return AXIsProcessTrusted();
+
+        nint key = ObjC.NSString(TrustedCheckOptionPrompt);
+        try
+        {
+            nint yes = ObjC.Send(
+                ObjC.objc_getClass("NSNumber"),
+                ObjC.sel_registerName("numberWithBool:"), 1);
+
+            ObjC.Send(dictionary, ObjC.sel_registerName("setObject:forKey:"), yes, key);
+
+            return AXIsProcessTrustedWithOptions(dictionary);
+        }
+        catch
+        {
+            // P8 — se a montagem do dicionário falhar, resta a verificação simples.
+            return AXIsProcessTrusted();
+        }
+        finally
+        {
+            ObjC.Release(key);
+            ObjC.Release(dictionary);
+        }
+    }
+
     // ── Interceptação de eventos ─────────────────────────────────────────────
 
     internal const uint TapSession = 1;          // kCGSessionEventTap
