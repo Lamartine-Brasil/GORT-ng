@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        725 testes
+    ├── Gort.Core.Tests/        766 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,28 +36,27 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **o protocolo do canal do processo auxiliar** (RF-286, RF-287).
-843 testes passando (725 + 46 + 40 + 32).
+Último commit: **a montagem da requisição ao modelo de linguagem** (RF-273 a RF-283 🔒).
+884 testes passando (766 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 46** — e os que
-restam são os serviços com credencial, os motores de OCR que dependem de SDK, o
-transporte da atualização e as janelas que dependem de servidores que não existem.
+A varredura por requisitos nunca citados no código saiu de **92 para 40**, e os 40 que
+restam são exatamente os que dependem de coisas de fora desta máquina:
 
-O que resta depende de coisas de fora desta máquina:
+| O que falta | Por quê | O que JÁ existe |
+|---|---|---|
+| RF-126, RF-129 a RF-135, RF-144 | motores de OCR clássico, de nuvem e por ambiente interpretado — SDKs e credenciais | as regras de seleção e degradação |
+| RF-249, RF-255 a RF-271, RF-285, RF-288, RF-290, RF-291 | sete serviços de tradução — credenciais, autenticação por delegação, biblioteca nativa | o rodízio de chaves, os presets, o protocolo de lote, o protocolo do canal, a API personalizada, o tradutor sem chave, e toda a montagem da requisição ao modelo de linguagem |
+| RF-421, RF-425, RF-426, RF-432 a RF-435 | o TRANSPORTE da atualização — servidor de distribuição | todas as decisões: tipo, publicação completa, protocolo seguro, soma, período de espera, substituição |
+| RF-539 a RF-542 | OCR de nuvem, instalador por ambiente interpretado, servidor da comunidade, navegador embutido | — |
 
-- **Sete dos nove serviços de tradução** (RF-255 a RF-291) — credenciais que só o usuário
-  tem, ou autenticação por delegação. O rodízio de chaves, os presets, o protocolo de lote e
-  a API personalizada já existem; falta o adaptador de cada um.
-- **Atualização automática** — falta o TRANSPORTE (RF-416 a RF-419, RF-425 a RF-427,
-  RF-432 a RF-435), que precisa de um servidor de distribuição. As DECISÕES — tipo de
-  atualização, publicação completa, protocolo seguro, soma, período de espera, substituição
-  dos arquivos — já existem e estão testadas.
-- **RF-539 a RF-542** — OCR de nuvem, instalador do motor por ambiente interpretado,
-  servidor da comunidade, navegador embutido.
-- **Motores de OCR clássico, de nuvem e por ambiente interpretado** — as regras estão
-  prontas; faltam os SDKs.
-- **Atalhos globais** — a lógica está verificada; falta conceder a permissão de
-  Acessibilidade ao GORT.app, que agora aparece na lista do sistema com nome próprio.
+**Próximo passo, quando houver o que falta:** cada um desses é um adaptador ligado a
+contratos que já existem e estão testados. Nenhum exige mudança no laço, no agrupamento, no
+cache ou na renderização — que é o que RF-566 promete, e a varredura de RF-567 guarda.
+
+Uma pendência que só depende de você: **conceder a permissão de Acessibilidade ao GORT.app**
+em Ajustes do Sistema › Privacidade e Segurança › Acessibilidade. Com ela, os atalhos
+globais (RF-436 a RF-453) passam de "lógica verificada" a "verificado na máquina". O
+programa já oferece o botão que abre o painel.
 
 ## Etapas concluídas
 
@@ -944,6 +943,31 @@ existe aqui. Mas o PROTOCOLO existe, e é a parte que se erra em silêncio.
 - **Um fluxo interrompido devolve nulo**, e não uma mensagem vazia: é o que acontece quando o
   processo auxiliar morre, e o serviço precisa distinguir os dois para poder dizer ao usuário
   qual foi.
+
+## A requisição ao modelo de linguagem (RF-273 a RF-283 🔒)
+
+A chave da API não existe aqui, mas os valores 🔒 existem — e são três dos mais fáceis de
+errar em silêncio.
+
+- **RF-274 🔒 — a instrução padrão.** Cada uma das seis cláusulas corrige um comportamento
+  OBSERVADO do modelo: ele resume falas longas, acrescenta honoríficos que não estão no
+  original, recusa falas de jogo quando a idade dos personagens não está dita, apaga os
+  marcadores que o programa usa para separar blocos, e comenta o que traduziu. Pedir
+  "traduza" e mais nada não basta.
+- **RF-275 — a personalizada vem primeiro.** Ela é a do usuário para o jogo dele; vir depois
+  da padrão a faria competir com seis cláusulas já estabelecidas.
+- **RF-276 🔒 — todas as categorias de segurança não bloqueiam.** Texto de jogo tem violência,
+  ameaça e insulto por definição — é o que os personagens dizem uns aos outros. Um filtro
+  ativo recusa a tradução e o usuário vê tela vazia sem saber por quê; pior, a recusa é
+  intermitente, porque depende da fala.
+- **RF-282 🔒 — o nível de raciocínio.** O mapeamento NÃO é monotônico: na família nova, o
+  nível 0 e o 3 dão o mesmo rótulo. É assim mesmo — ele foi calibrado contra o comportamento
+  de cada família, não derivado de uma escala. Oito casos travados em teste.
+- **RF-277** — o bloqueio por conteúdo refaz no tradutor gratuito SEM sinalizar erro: o
+  usuário não fez nada de errado, e uma mensagem de erro o faria procurar defeito na
+  configuração dele.
+- **RF-272 🔒** — os códigos de chinês normalizados para um genérico. O serviço não aceita as
+  variantes regionais como origem, e a falha não diz que a culpa é do código.
 
 ## Decisões registradas
 

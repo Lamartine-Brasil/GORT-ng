@@ -345,6 +345,26 @@ public static class RequestTemplate
         _ => null,
     };
 
+    /// <summary>
+    /// RF-272 🔒 — Os códigos de chinês são normalizados para um código GENÉRICO antes do
+    /// envio ao serviço europeu.
+    ///
+    /// Ele não aceita as variantes regionais como idioma de ORIGEM: mandar `zh-Hans` faz a
+    /// requisição falhar inteira, e a falha não diz que a culpa é do código. Normalizar aqui
+    /// é o que faz um usuário de chinês simplificado e um de tradicional funcionarem sem
+    /// saber que existe essa distinção do lado do serviço.
+    /// </summary>
+    public static string NormalizeChinese(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return code;
+
+        string trimmed = code.Trim();
+
+        return trimmed.StartsWith("zh", StringComparison.OrdinalIgnoreCase)
+            ? "ZH"
+            : trimmed;
+    }
+
     // ── RF-301 — cabeçalhos adicionais ──────────────────────────────────────
 
     /// <summary>

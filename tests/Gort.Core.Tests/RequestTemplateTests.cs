@@ -216,3 +216,29 @@ public class RequestTemplateTests
         Assert.Equal(("Referer", "https://exemplo.com/x"), Assert.Single(headers));
     }
 }
+
+/// <summary>RF-272 🔒 — Normalização dos códigos de chinês para o serviço europeu.</summary>
+public class ChineseCodeTests
+{
+    /// <summary>
+    /// RF-272 🔒 — O serviço não aceita as variantes regionais como idioma de ORIGEM: mandar
+    /// `zh-Hans` faz a requisição falhar inteira, e a falha não diz que a culpa é do código.
+    /// </summary>
+    [Theory]
+    [InlineData("zh", "ZH")]
+    [InlineData("zh-Hans", "ZH")]
+    [InlineData("zh-Hant", "ZH")]
+    [InlineData("zh-CN", "ZH")]
+    [InlineData("ZH-TW", "ZH")]
+    public void RF_272_as_variantes_de_chines_viram_o_codigo_generico(string code, string expected)
+        => Assert.Equal(expected, RequestTemplate.NormalizeChinese(code));
+
+    /// <summary>Os demais idiomas passam intocados — a normalização é só do chinês.</summary>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("pt-BR")]
+    [InlineData("ja")]
+    [InlineData("")]
+    public void Os_demais_idiomas_passam_intocados(string code)
+        => Assert.Equal(code, RequestTemplate.NormalizeChinese(code));
+}
