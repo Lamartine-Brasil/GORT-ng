@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        701 testes
+    ├── Gort.Core.Tests/        711 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,10 +36,12 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **as decisões da atualização automática** (RF-420 a RF-431).
-819 testes passando (701 + 46 + 40 + 32).
+Último commit: **a configuração padrão remota** (RF-417 🔒 a RF-419). 829 testes
+passando (711 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 49**.
+A varredura por requisitos nunca citados no código saiu de **92 para 46** — e os que
+restam são os serviços com credencial, os motores de OCR que dependem de SDK, o
+transporte da atualização e as janelas que dependem de servidores que não existem.
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -906,6 +908,24 @@ verificáveis sem ele. Quando o servidor existir, o que falta é o transporte.
   marcador no futuro bloquearia a atualização por tempo indefinido.
 - **RF-430** — mover com até P-117 tentativas e falhar de forma LIMPA. Um executável meio
   substituído não abre, e desistir com o antigo intacto é sempre melhor que insistir.
+
+## A configuração padrão remota (RF-417 🔒 a RF-419)
+
+Os valores que vêm daqui são exatamente os pontos em que o programa fala com serviços que
+não controla — o token separador que cada tradutor respeita, e a forma de extrair a tradução
+da página do navegador embutido. O motivo está na letra do requisito: eles "dependem de
+páginas de terceiros que mudam sem aviso; poder corrigi-los remotamente evita uma
+atualização do programa a cada mudança".
+
+- **RF-418** — valores ausentes OU VAZIOS mantêm os embutidos. Um arquivo remoto meio
+  preenchido não pode apagar configuração que funciona: a regra é acrescentar, nunca
+  esvaziar. Um campo com o tipo errado também não contamina os outros.
+- **RF-419** — um arquivo remoto ilegível não impede a inicialização: devolve vazio, e vazio
+  mantém tudo. É a disciplina de RF-024 aplicada a um arquivo sobre o qual se tem ainda menos
+  controle.
+
+Sem servidor de distribuição a configuração fica vazia — e o programa funciona igual, que é
+a prova de que RF-418 está certo.
 
 ## Decisões registradas
 

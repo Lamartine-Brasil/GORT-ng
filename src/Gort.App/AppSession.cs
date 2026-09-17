@@ -129,6 +129,16 @@ public sealed class AppSession : IDisposable
     public Gort.Core.Imaging.BlankFrameWatch BlankFrames { get; } = new();
 
     /// <summary>
+    /// RF-417 / RF-418 — Configuração padrão remota.
+    ///
+    /// Sem servidor de distribuição ela fica VAZIA, e vazia mantém tudo o que está embutido
+    /// nos dados — que é exatamente o que RF-418 manda. O programa funciona igual; o que
+    /// falta é o transporte.
+    /// </summary>
+    public Gort.Core.Updating.RemoteDefaults RemoteDefaults { get; set; }
+        = Gort.Core.Updating.RemoteDefaults.Empty;
+
+    /// <summary>
     /// C2 / RF-089 — A janela anexada, quando há uma.
     ///
     /// NÃO é persistida no perfil, ao contrário das áreas (RF-066): o identificador de uma
@@ -247,7 +257,14 @@ public sealed class AppSession : IDisposable
             : null;
         Memory?.Load();
 
-        Pipeline.SeparatorToken = info?.SeparatorToken ?? Gort.Core.Calibration.P.SeparatorToken;
+        // RF-417 — o token separador vem do arquivo remoto quando há, e do catálogo quando
+        // não: ele depende de como cada tradutor trata o texto, e isso muda sem aviso.
+        Pipeline.SeparatorToken = RemoteDefaults.SeparatorTokenFor(
+            serviceKey, info?.SeparatorToken ?? Gort.Core.Calibration.P.SeparatorToken);
+
+        // RF-417 / P-151 — o mesmo para o modo de token avançado.
+        Pipeline.AdvancedToken = RemoteDefaults.AdvancedToken
+                                 ?? Gort.Core.Calibration.P.AdvancedTokenDefault;
         Pipeline.Memory = Memory;
 
         // RF-201 — a segunda barreira antes da rede não se aplica ao banco local.
