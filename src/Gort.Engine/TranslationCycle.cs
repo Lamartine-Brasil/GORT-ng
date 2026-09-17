@@ -53,6 +53,12 @@ public sealed class CycleSettings
 
     /// <summary>RF-554 / RF-559 — Medidor das imagens de região vivas.</summary>
     public LiveImageMeter? ImageMeter { get; init; }
+
+    /// <summary>
+    /// RF-570 — Vigia de quadros em branco. Nulo desliga a sugestão, que é o que os testes
+    /// e as sondas querem.
+    /// </summary>
+    public Gort.Core.Imaging.BlankFrameWatch? BlankFrames { get; init; }
 }
 
 /// <summary>O que um ciclo produziu.</summary>
@@ -79,6 +85,12 @@ public sealed class CycleResult
 
     /// <summary>RF-236 — Mensagem de erro do serviço, quando houve.</summary>
     public string? Error { get; init; }
+
+    /// <summary>
+    /// RF-570 — A captura devolveu quadros em branco tempo suficiente para sugerir a causa.
+    /// É sugestão, não erro: a captura funcionou, e o ciclo continua normalmente.
+    /// </summary>
+    public bool SuggestsFullscreenProblem { get; init; }
 
     /// <summary>Quantos textos foram efetivamente à rede neste ciclo.</summary>
     public int NetworkCount { get; init; }
@@ -147,6 +159,14 @@ public sealed class TranslationCycle
         // RF-554 — não há mais de um conjunto de imagens de região vivo por vez: o conjunto
         // anterior já foi solto no ciclo passado, e o medidor recomeça com este.
         settings.ImageMeter?.Reset();
+
+        // RF-570 — o sintoma de um jogo em tela cheia exclusiva é a captura funcionar, não
+        // dar erro, e devolver preto. Basta uma região com conteúdo para o quadro não contar
+        // como em branco: com várias áreas, uma delas fora do jogo é o caso comum.
+        bool blank = settings.BlankFrames is not null
+                     && captured.All(r => Gort.Core.Imaging.BlankFrameDetector.IsBlank(r.Image));
+
+        bool suggest = settings.BlankFrames?.Observe(blank) ?? false;
 
         var regions = new List<RegionResult>(captured.Count);
         var blockTexts = new List<string>();
@@ -275,6 +295,7 @@ public sealed class TranslationCycle
                 entries, regions.Count, settings.NumberAreas),
             Error = batch.Error,
             NetworkCount = batch.NetworkCount,
+            SuggestsFullscreenProblem = suggest,
         };
     }
 }

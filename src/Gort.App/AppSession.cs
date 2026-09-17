@@ -125,6 +125,9 @@ public sealed class AppSession : IDisposable
     /// <summary>RF-554 / RF-559 — Imagens de região vivas neste instante.</summary>
     public LiveImageMeter ImageMeter { get; } = new();
 
+    /// <summary>RF-570 — Vigia de quadros em branco.</summary>
+    public Gort.Core.Imaging.BlankFrameWatch BlankFrames { get; } = new();
+
     /// <summary>
     /// C2 / RF-089 — A janela anexada, quando há uma.
     ///
@@ -383,6 +386,7 @@ public sealed class AppSession : IDisposable
             // RF-554 — o medidor vale sempre, não só em depuração: ele existe para o
             // indicador de RF-558, que é permanente.
             ImageMeter = ImageMeter,
+            BlankFrames = BlankFrames,
         };
     }
 

@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        653 testes
+    ├── Gort.Core.Tests/        661 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **RF-569 — a oferta de conceder a permissão**. 770 testes passando
-(653 + 46 + 40 + 31).
+Último commit: **RF-570 — a sugestão dos quadros em branco**. 779 testes passando
+(661 + 46 + 40 + 32).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -686,6 +686,30 @@ simplesmente não tem não vira: não há o que o usuário possa fazer, e um bot
 O aviso de que a permissão só vale a partir da próxima abertura é parte da mensagem: o macOS
 não a aplica ao processo em execução, e sem dizer isso o usuário concede, vê que não
 funcionou, e conclui que o programa está quebrado.
+
+## RF-570 — quadros em branco viram sugestão
+
+A segunda metade de RF-570 estava por fazer: "se detectar que a captura devolve apenas
+quadros pretos, deve SUGERIR isso ao usuário em vez de exibir tradução vazia repetidamente".
+
+O sintoma de um jogo em tela cheia exclusiva é esse — a captura funciona, não dá erro, e
+devolve preto. Sem a detecção, o usuário veria a tradução simplesmente não aparecer, ciclo
+após ciclo, sem nada apontando a causa. E a causa é justamente a que ele menos suspeitaria,
+porque o jogo está bem visível na tela dele.
+
+- A varredura é **amostrada**: percorrer cada pixel de uma região ampliada custaria mais que
+  o pré-processamento inteiro, e uma imagem uniforme é uniforme em qualquer amostra.
+- A tolerância **não é zero**: compressão de vídeo e escalonamento de tela deixam ruído, e um
+  preto de verdade numa captura real chega com valores de 0 a 2.
+- A sugestão espera **três quadros seguidos**: um quadro preto isolado é comum e inócuo — uma
+  transição de cena, um carregamento —, e sugerir na primeira vez seria acusar o usuário de
+  algo que se resolve no ciclo seguinte.
+- Ela sai **uma vez por sequência**: repeti-la a cada ciclo transformaria um aviso útil em
+  ruído, e o usuário aprenderia a ignorá-lo justamente quando ele importa. Um quadro com
+  conteúdo rearma.
+- E sai **antes da detecção de mudança**: um quadro em branco produz texto vazio, que o
+  detector trata como mudança e apaga a tela — é exatamente aí que o usuário precisa saber
+  por quê.
 
 ## Decisões registradas
 

@@ -105,6 +105,12 @@ public sealed class LoopHost
     /// </summary>
     public Func<bool>? SourceStillValid { get; init; }
 
+    /// <summary>
+    /// RF-570 — Uma sugestão ao usuário, distinta de um erro: a operação funcionou, mas o
+    /// resultado indica um problema cuja causa o programa consegue apontar.
+    /// </summary>
+    public Action<string>? Suggest { get; init; }
+
     /// <summary>Chamado quando o laço termina, para a interface refletir o estado.</summary>
     public Action? Stopped { get; init; }
 }
@@ -152,6 +158,11 @@ public sealed class TranslationLoop : IDisposable
     /// Fica aqui, e não na interface, porque é o laço que descobre: quem a exibe precisa só
     /// repassá-la.
     /// </summary>
+    /// <summary>RF-570 — A sugestão exibida quando a captura devolve só quadros em branco.</summary>
+    public const string FullscreenSuggestion =
+        "A captura está devolvendo apenas quadros em branco. Se o jogo está em tela cheia " +
+        "exclusiva, mude-o para modo janela ou janela sem borda.";
+
     public const string SourceGoneMessage =
         "A janela que estava sendo capturada não existe mais. A tradução parou.";
 
@@ -351,6 +362,14 @@ public sealed class TranslationLoop : IDisposable
 
             if (result is null) return;          // pedido de parada durante a espera
             if (_endRequested) return;
+
+            // RF-570 — a sugestão sai antes da detecção de mudança: um quadro em branco
+            // produz texto vazio, que o detector trata como mudança e apaga a tela — e é
+            // exatamente aí que o usuário precisa saber por quê.
+            if (result.SuggestsFullscreenProblem)
+            {
+                try { _host.Suggest?.Invoke(FullscreenSuggestion); } catch { /* P8 */ }
+            }
 
             // Passo 15 — detecção de mudança.
             var decision = _detector.Evaluate(result.RecognizedText);

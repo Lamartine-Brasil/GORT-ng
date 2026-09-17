@@ -36,6 +36,7 @@ public class TranslationLoopTests
             FlushMemory = () => probe.Flushes++,
             CycleIntervalMs = () => intervalMs,
             SourceStillValid = () => probe.SourceValid,
+            Suggest = m => probe.Suggestions.Add(m),
             Stopped = () => probe.Stops++,
         };
 
@@ -114,6 +115,47 @@ public class TranslationLoopTests
         return condition();
     }
 
+    /// <summary>
+    /// RF-570 — Quando a captura devolve só quadros em branco, o laço SUGERE a causa em vez
+    /// de deixar a tradução vazia se repetir sem explicação.
+    ///
+    /// A sugestão sai ANTES da detecção de mudança: um quadro em branco produz texto vazio,
+    /// que o detector trata como mudança e apaga a tela — e é exatamente aí que o usuário
+    /// precisa saber por quê.
+    /// </summary>
+    [Fact]
+    public void RF_570_quadros_em_branco_viram_sugestao()
+    {
+        var probe = new LoopProbe();
+        var host = new LoopHost
+        {
+            Areas = () => probe.Areas,
+            Settings = () => null!,
+            RunCycle = (_, _) =>
+            {
+                probe.Cycles++;
+                return Task.FromResult(new CycleResult
+                {
+                    Regions = Array.Empty<Gort.Core.Model.RegionResult>(),
+                    RecognizedText = "",
+                    DisplayText = "",
+                    SuggestsFullscreenProblem = true,
+                });
+            },
+            HasTranslationWindow = () => true,
+            Draw = _ => probe.Draws++,
+            Suggest = m => probe.Suggestions.Add(m),
+            CycleIntervalMs = () => 0,
+            Stopped = () => probe.Stops++,
+        };
+
+        using var loop = new TranslationLoop(host);
+        Assert.True(loop.Start(LoopMode.OneShot));
+        Assert.True(SpinUntil(() => loop.State == LoopState.Idle, TimeSpan.FromSeconds(2)));
+
+        Assert.Contains(TranslationLoop.FullscreenSuggestion, probe.Suggestions);
+    }
+
     private sealed class LoopProbe
     {
         public BuiltAreas Areas { get; } = new()
@@ -131,6 +173,7 @@ public class TranslationLoopTests
         public int Cycles, Draws, Repaints, Copies, SideEffects, Flushes, Stops;
         public List<string> Drawn { get; } = new();
         public List<string> Errors { get; } = new();
+        public List<string> Suggestions { get; } = new();
         public List<string> Texts { get; set; } = new() { "texto" };
         private int _next;
 

@@ -1692,6 +1692,12 @@ public partial class MainWindow : Window
                 Dispatcher.UIThread.Post(() => DrawResult(result));
             },
 
+            // RF-570 — a captura devolveu só preto por vários ciclos: em vez de exibir
+            // tradução vazia repetidamente, o programa SUGERE a causa. Sem isso o usuário
+            // veria a tradução não aparecer sem nada que apontasse o porquê — e o porquê é
+            // justamente o que ele menos suspeitaria, porque o jogo está bem visível.
+            Suggest = message => Dispatcher.UIThread.Post(() => Say(message)),
+
             Repaint = () => Dispatcher.UIThread.Post(() => _translationWindow?.Repaint()),
 
             ReportError = message =>
