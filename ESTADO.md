@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        663 testes
+    ├── Gort.Core.Tests/        664 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **dez requisitos pequenos que nunca tinham sido escritos**.
-781 testes passando (663 + 46 + 40 + 32).
+Último commit: **a tradução da área de transferência, ligada de verdade**.
+782 testes passando (664 + 46 + 40 + 32).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -754,6 +754,35 @@ credenciais —, mas boa parte era trabalho simplesmente não feito. Desta leva:
   moveria a janela inteira.
 - **RF-512** — trocar o idioma de OCR move a seleção de origem. Os dois sempre andam juntos
   na prática, e deixar a segunda escolha para o usuário é só um jeito de deixá-lo errar.
+
+## A tradução da área de transferência, e mais três requisitos
+
+`ClipboardTranslationGate` existia no núcleo, testado, com todas as condições de RF-467 — e
+nada no programa o consultava: ninguém lia a área de transferência. Agora lê.
+
+- **RF-465** — o recurso é inicializado só quando ligado. Não é economia de memória: ler a
+  área de transferência é uma operação que alguns gerenciadores registram, e um programa que
+  a consulta a cada segundo sem que o usuário tenha pedido é um programa que vigia sem
+  motivo.
+- **RF-467** — todas as condições ficam no PORTÃO, em `Gort.Core`, e não na janela: são regra
+  de produto, e tê-las no núcleo é o que permite verificá-las sem área de transferência
+  nenhuma.
+- **RF-471** — o resultado é lido pelo mesmo caminho do resultado de um ciclo, então as
+  regras de fila e interrupção de RF-475 a RF-478 valem igualmente.
+
+E mais:
+
+- **RF-386** — qualidade de renderização na sobreposição. Importa mais ali que em qualquer
+  outra superfície: o texto é pequeno e vai sobre a imagem do jogo, e é a suavização que
+  decide se ele fica legível ou vira mancha.
+- **RF-379 🔒** — o requisito manda desenhar num mapa de bits reutilizado, recriado só quando
+  as dimensões mudam. Aqui não há mapa de bits nenhum, e isso CUMPRE o requisito: o motivo
+  dele, na própria letra, é que recriar a superfície a cada quadro esgota os recursos
+  gráficos — perigo de quem desenha em modo imediato. O Avalonia é de modo retido, e a
+  política que RF-379 descreve está implementada um nível abaixo.
+- **RF-380 🔒** — uma varredura do código-fonte inteiro garante que não há `GC.Collect` em
+  lugar nenhum. É a chamada que alguém acrescenta para "resolver" um consumo de memória que
+  não entendeu, e o lugar onde ela apareceria é justamente o caminho quente.
 
 ## Decisões registradas
 

@@ -93,7 +93,102 @@ public partial class MainWindow : Window
         RememberMonitorLayout();
 
         StartMouseFollow();
+        StartClipboardWatch();
         SetUpTray();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RF-464 a RF-472 — Tradução da área de transferência
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private DispatcherTimer? _clipboardTimer;
+    private string _lastClipboard = "";
+
+    /// <summary>
+    /// RF-465 — O recurso é INICIALIZADO apenas quando ligado.
+    ///
+    /// Não é economia de memória: ler a área de transferência é uma operação do sistema que
+    /// alguns gerenciadores registram, e um programa que a consulta a cada segundo sem que
+    /// o usuário tenha pedido é um programa que vigia sem motivo.
+    /// </summary>
+    private void StartClipboardWatch()
+    {
+        bool wanted = _session.Clipboard.Enabled;
+
+        if (!wanted)
+        {
+            _clipboardTimer?.Stop();
+            _clipboardTimer = null;
+            return;
+        }
+
+        if (_clipboardTimer is not null) return;
+
+        _clipboardTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _clipboardTimer.Tick += (_, _) => _ = CheckClipboardAsync();
+        _clipboardTimer.Start();
+    }
+
+    /// <summary>
+    /// RF-464 / RF-467 a RF-471 — Traduz todo texto novo que aparecer na área de
+    /// transferência.
+    ///
+    /// Todas as condições de RF-467 estão no PORTÃO, em `Gort.Core`, e não aqui: elas são
+    /// regra do produto, e tê-las no núcleo é o que permite verificá-las sem área de
+    /// transferência nenhuma.
+    /// </summary>
+    private async Task CheckClipboardAsync()
+    {
+        string text;
+        try
+        {
+            // RF-466 — só conteúdo do tipo TEXTO; o que não for converte para nulo.
+            text = await Clipboard!.GetTextAsync() ?? "";
+        }
+        catch
+        {
+            return;   // RF-474 — falhas de acesso à área de transferência são silenciosas
+        }
+
+        if (text == _lastClipboard) return;
+        _lastClipboard = text;
+
+        if (!_session.Clipboard.ShouldTranslate(
+                text, loopIdle: !_loop.IsRunning, busyWithConfiguration: _busy,
+                windowMode: _session.Profile.WindowMode))
+        {
+            return;
+        }
+
+        // RF-468 — uma tradução em andamento bloqueia novas até terminar.
+        _session.Clipboard.Begin(text);
+
+        try
+        {
+            // RF-469 — a mensagem de "detectado — traduzindo", quando a opção está ligada.
+            if (_session.Clipboard.ShowTranslating)
+                _translationWindow?.Show(
+                    Gort.Core.Auxiliary.ClipboardTranslationGate.TranslatingMessage, text);
+
+            var batch = await _session.Pipeline.TranslateAsync(
+                new[] { text }, _session.Service!, _session.BuildCycleSettings().TranslationContext);
+
+            // RF-470 — o original anexado ao fim, quando a opção está ligada.
+            string result = _session.Clipboard.Compose(batch.Translations[0] ?? "", text);
+
+            // RF-471 — o resultado vai para a janela de tradução ATIVA e, com a leitura em
+            // voz alta ligada, também é lido.
+            _translationWindow?.Show(result, text);
+            SpeakText(result);
+        }
+        catch (Exception ex)
+        {
+            Say(_loc.Format("msg.error", ex.Message));
+        }
+        finally
+        {
+            _session.Clipboard.Finish();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -607,6 +702,13 @@ public partial class MainWindow : Window
 
         // RF-531 — o modo bandeja é uma das opções que valem sem reiniciar.
         ApplyTrayMode();
+
+        // RF-472 — aplicar configurações limpa o estado de "traduzindo pela área de
+        // transferência": uma tradução interrompida pela pausa deixaria o portão fechado
+        // para sempre.
+        _session.Clipboard.Reset();
+        _lastClipboard = "";
+        StartClipboardWatch();
 
         // O que depende de janelas vivas é reaplicado aqui, fora da pausa.
         _remote?.SetAlwaysOnTop(_session.Advanced.RemoteAlwaysOnTop);
@@ -2383,6 +2485,27 @@ public partial class MainWindow : Window
     }
 
     /// <summary>RF-476 a RF-480 — Leitura em voz alta do resultado.</summary>
+    /// <summary>
+    /// RF-471 — Lê um texto em voz alta, pelo mesmo caminho do resultado de um ciclo: as
+    /// regras de fila e de interrupção de RF-475 a RF-478 valem igualmente para a tradução
+    /// vinda da área de transferência.
+    /// </summary>
+    private void SpeakText(string text)
+    {
+        string clean = Gort.Core.Auxiliary.SpeechQueue.Clean(
+            text, _session.Profile.WindowMode, _session.Pipeline.SeparatorToken);
+
+        switch (_session.Speech.Decide(clean))
+        {
+            case Gort.Core.Auxiliary.SpeechQueue.Decision.Speak:
+                _session.Platform.Speech.Speak(clean, interrupt: false);
+                break;
+            case Gort.Core.Auxiliary.SpeechQueue.Decision.SpeakInterrupting:
+                _session.Platform.Speech.Speak(clean, interrupt: true);
+                break;
+        }
+    }
+
     private void SpeakResult(CycleResult result)
     {
         // RF-478 — no modo sobreposição, os tokens separadores saem antes da leitura.

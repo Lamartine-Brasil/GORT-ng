@@ -108,6 +108,7 @@ public sealed class Profile
     /// <summary>RF-387 — Vazio significa "resolver em tempo de execução"; nunca um nome fixo.</summary>
     public string FontFamily { get; set; } = "";
     /// <summary>P-127.</summary>
+    /// <summary>RF-388 — O tamanho de fonte padrão é P-127. 🔒</summary>
     public double FontSize { get; set; } = P.DefaultFontSize;
     public Rgba TextColor { get; set; } = new(P.DefaultTextColor.R, P.DefaultTextColor.G, P.DefaultTextColor.B);
     public Rgba Stroke1Color { get; set; } = new(P.DefaultStroke1Color.R, P.DefaultStroke1Color.G, P.DefaultStroke1Color.B);

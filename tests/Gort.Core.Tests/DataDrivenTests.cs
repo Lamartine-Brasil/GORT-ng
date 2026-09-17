@@ -216,3 +216,52 @@ public class DataDrivenTests
         }
     }
 }
+
+/// <summary>RF-380 🔒 — Nenhuma coleta de lixo forçada, em lugar nenhum.</summary>
+public class ForcedCollectionTests
+{
+    /// <summary>
+    /// RF-380 — "Nenhuma coleta de lixo forçada deve ocorrer durante o desenho. Motivo: uma
+    /// coleta bloqueante por quadro na thread de interface é perceptível como travamento
+    /// durante a tradução."
+    ///
+    /// A varredura é do CÓDIGO-FONTE inteiro, e não só do desenho: `GC.Collect` é a chamada
+    /// que alguém acrescenta para "resolver" um consumo de memória que não entendeu, e o
+    /// lugar onde ela apareceria é justamente o caminho quente.
+    /// </summary>
+    [Fact]
+    public void RF_380_nenhuma_coleta_de_lixo_forcada_no_programa()
+    {
+        var offenders = new List<string>();
+
+        foreach (string project in new[]
+                 { "Gort.Core", "Gort.Engine", "Gort.Ocr.Rapid", "Gort.Platform", "Gort.App" })
+        {
+            string dir = Path.Combine(TestPaths.RepositoryRoot, "src", project);
+            if (!Directory.Exists(dir)) continue;
+
+            foreach (string file in Directory.EnumerateFiles(dir, "*.cs",
+                                                             SearchOption.AllDirectories))
+            {
+                if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
+                    || file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
+                {
+                    continue;
+                }
+
+                var lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string code = lines[i].TrimStart();
+                    if (code.StartsWith("//") || code.StartsWith("///")) continue;
+
+                    if (code.Contains("GC.Collect", StringComparison.Ordinal))
+                        offenders.Add($"{Path.GetFileName(file)}:{i + 1}");
+                }
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            "RF-380 — coleta de lixo forçada em:\n  " + string.Join("\n  ", offenders));
+    }
+}

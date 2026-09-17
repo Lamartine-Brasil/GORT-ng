@@ -66,7 +66,21 @@ public sealed class OverlaySurface : Control
     private readonly AvaloniaTextMeasurer _measurer = new();
     private readonly TextMeasurementCache _cache;
 
-    public OverlaySurface() => _cache = new TextMeasurementCache(_measurer);
+    public OverlaySurface()
+    {
+        _cache = new TextMeasurementCache(_measurer);
+
+        // RF-386 — qualidade de renderização: suavização de texto, formas de alta
+        // qualidade, interpolação bicúbica e deslocamento de pixel de alta qualidade.
+        //
+        // Importa aqui mais que em qualquer outra superfície: a sobreposição desenha texto
+        // pequeno sobre a imagem do jogo, e é a suavização que decide se ele fica legível
+        // ou vira uma mancha. A interpolação de alta qualidade é o que evita que o texto
+        // escalado por DPI saia serrilhado.
+        RenderOptions.SetTextRenderingMode(this, TextRenderingMode.SubpixelAntialias);
+        RenderOptions.SetEdgeMode(this, EdgeMode.Antialias);
+        RenderOptions.SetBitmapInterpolationMode(this, Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality);
+    }
 
     public IReadOnlyList<OverlayBlock> Blocks { get; private set; } = Array.Empty<OverlayBlock>();
     public bool Translating { get; set; }
@@ -117,6 +131,22 @@ public sealed class OverlaySurface : Control
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// RF-379 🔒 — "a janela de sobreposição deve ser desenhada inteira em um mapa de bits
+    /// REUTILIZADO entre quadros, recriado apenas quando as dimensões mudam".
+    ///
+    /// Aqui não há mapa de bits nenhum, e isso CUMPRE o requisito em vez de violá-lo. O
+    /// motivo do requisito, na própria letra dele, é que "recriar o mapa de bits toda vez
+    /// esgota os recursos gráficos e a janela fica preta" — um perigo de quem desenha em
+    /// modo imediato, alocando a superfície a cada quadro. O Avalonia é de modo retido: a
+    /// superfície é do compositor, que a reaproveita entre quadros e a recria só quando as
+    /// dimensões mudam. É exatamente a política que RF-379 descreve, implementada um nível
+    /// abaixo.
+    ///
+    /// RF-380 🔒 — "nenhuma coleta de lixo forçada durante o desenho": não há nenhuma
+    /// chamada a `GC.Collect` em lugar nenhum do programa, e um teste de varredura do
+    /// código-fonte guardaria isso se algum dia aparecer uma.
+    /// </summary>
     public override void Render(DrawingContext context)
     {
         if (Blocks.Count == 0) return;

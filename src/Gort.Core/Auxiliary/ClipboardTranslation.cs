@@ -45,7 +45,11 @@ public sealed class ClipboardTranslationGate
         if (busyWithConfiguration) return false;
         if (windowMode == WindowMode.Overlay) return false;
 
+        // RF-466 — só conteúdo do tipo TEXTO dispara tradução. Quem lê a área de
+        // transferência já entrega texto ou nada; o que chega vazio aqui é imagem, arquivo
+        // ou formato que o sistema não converteu — e nenhum deles é para traduzir.
         if (string.IsNullOrWhiteSpace(text)) return false;
+
         return text != _lastTranslated;
     }
 
