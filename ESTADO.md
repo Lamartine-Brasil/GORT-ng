@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        711 testes
+    ├── Gort.Core.Tests/        725 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **a configuração padrão remota** (RF-417 🔒 a RF-419). 829 testes
-passando (711 + 46 + 40 + 32).
+Último commit: **o protocolo do canal do processo auxiliar** (RF-286, RF-287).
+843 testes passando (725 + 46 + 40 + 32).
 
 A varredura por requisitos nunca citados no código saiu de **92 para 46** — e os que
 restam são os serviços com credencial, os motores de OCR que dependem de SDK, o
@@ -926,6 +926,24 @@ atualização do programa a cada mudança".
 
 Sem servidor de distribuição a configuração fica vazia — e o programa funciona igual, que é
 a prova de que RF-418 está certo.
+
+## O protocolo do canal (RF-286, RF-287)
+
+O tradutor local por processo auxiliar precisa de uma biblioteca instalada no sistema que não
+existe aqui. Mas o PROTOCOLO existe, e é a parte que se erra em silêncio.
+
+- **RF-287** — dois bytes de comprimento, **byte alto primeiro**. Trocada a ordem, uma
+  mensagem de 256 bytes vira uma de 1, e a outra ponta lê um caractere e trava esperando o
+  resto. Um teste fixa os dois bytes de uma mensagem de 260.
+- **A truncagem respeita o par substituto.** Cortar entre as duas metades produziria um
+  caractere inválido, que a outra ponta interpretaria como texto CORROMPIDO em vez de texto
+  cortado — e o remédio dos dois é diferente.
+- **RF-286** — a vírgula do comando `comando,dados` separa **apenas a primeira ocorrência**:
+  o texto a traduzir contém vírgulas com frequência, e dividir em todas partiria a frase em
+  pedaços que o servidor receberia como comandos diferentes.
+- **Um fluxo interrompido devolve nulo**, e não uma mensagem vazia: é o que acontece quando o
+  processo auxiliar morre, e o serviço precisa distinguir os dois para poder dizer ao usuário
+  qual foi.
 
 ## Decisões registradas
 
