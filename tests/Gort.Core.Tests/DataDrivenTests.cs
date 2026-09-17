@@ -78,8 +78,12 @@ public class DataDrivenTests
     }
 
     /// <summary>
-    /// RF-566 — Um idioma acrescentado APENAS nos dados é carregado com todas as suas
-    /// propriedades, e é delas que o comportamento depende.
+    /// RF-566 / RF-312 — Um idioma acrescentado APENAS nos dados é carregado com todas as
+    /// suas propriedades, e é delas que o comportamento depende. O usuário acrescenta um
+    /// idioma editando a configuração, sem recompilar.
+    ///
+    /// RF-310 — o escopo de dois idiomas de origem é decisão de PRODUTO, não limitação de
+    /// arquitetura: este teste é a prova de que nada no programa assume quantos são.
     /// </summary>
     [Fact]
     public void RF_566_um_idioma_novo_e_so_uma_entrada_nos_dados()

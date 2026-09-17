@@ -236,3 +236,72 @@ public class PartVIIITests
         }
     }
 }
+
+/// <summary>RF-201 — A segunda barreira antes da rede.</summary>
+public class SecondNetworkBarrierTests
+{
+    private static readonly TranslationContext Context =
+        new() { SourceCode = "en", TargetCode = "pt" };
+
+    private sealed class Counter : ITranslationService
+    {
+        public int Calls { get; private set; }
+        public string Key => "contador";
+        public void Dispose() { }
+
+        public Task<TranslationOutcome> TranslateAsync(
+            string text, TranslationContext context, CancellationToken cancellation)
+        {
+            Calls++;
+            return Task.FromResult(TranslationOutcome.Ok(text));
+        }
+    }
+
+    /// <summary>
+    /// RF-201 — Com serviço de rede, o MESMO texto não vai duas vezes.
+    ///
+    /// A primeira barreira é a detecção de mudança do laço, que compara o texto RECONHECIDO.
+    /// Esta compara o que de fato seria ENVIADO — e os dois diferem, porque o tratamento
+    /// textual colapsa variações que o OCR produz. Sem ela, cada tremida do OCR viraria uma
+    /// requisição de rede.
+    /// </summary>
+    [Fact]
+    public async Task RF_201_o_mesmo_texto_nao_vai_a_rede_duas_vezes()
+    {
+        var pipeline = new TranslationPipeline { ServiceIsLocalDatabase = false };
+        var service = new Counter();
+
+        await pipeline.TranslateAsync(new[] { "Hello" }, service, Context);
+        await pipeline.TranslateAsync(new[] { "Hello" }, service, Context);
+
+        Assert.Equal(1, service.Calls);
+    }
+
+    [Fact]
+    public async Task RF_201_um_texto_diferente_passa_pela_barreira()
+    {
+        var pipeline = new TranslationPipeline { ServiceIsLocalDatabase = false };
+        var service = new Counter();
+
+        await pipeline.TranslateAsync(new[] { "Hello" }, service, Context);
+        await pipeline.TranslateAsync(new[] { "Goodbye" }, service, Context);
+
+        Assert.Equal(2, service.Calls);
+    }
+
+    /// <summary>
+    /// RF-201 — Com o banco de dados LOCAL a barreira não se aplica: não há rede a poupar, e
+    /// a consulta é mais barata que a comparação.
+    /// </summary>
+    [Fact]
+    public async Task RF_201_o_banco_local_nao_tem_barreira()
+    {
+        var pipeline = new TranslationPipeline { ServiceIsLocalDatabase = true };
+        var service = new Counter();
+
+        await pipeline.TranslateAsync(new[] { "Hello" }, service, Context);
+        await pipeline.TranslateAsync(new[] { "Hello" }, service, Context);
+
+        Assert.Equal(2, service.Calls);
+    }
+}

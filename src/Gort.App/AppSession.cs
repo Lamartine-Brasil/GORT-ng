@@ -249,6 +249,9 @@ public sealed class AppSession : IDisposable
 
         Pipeline.SeparatorToken = info?.SeparatorToken ?? Gort.Core.Calibration.P.SeparatorToken;
         Pipeline.Memory = Memory;
+
+        // RF-201 — a segunda barreira antes da rede não se aplica ao banco local.
+        Pipeline.ServiceIsLocalDatabase = info?.Key == "localdb";
         Pipeline.IgnoreEmptyTranslation = Advanced.IgnoreEmptyTranslation;
 
         // RF-465 / RF-473 — os recursos auxiliares seguem o perfil e as opções avançadas.

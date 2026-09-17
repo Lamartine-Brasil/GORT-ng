@@ -31,6 +31,24 @@ public sealed class TranslationPipeline : IDisposable
     public ResultMemory? Memory { get; set; }
 
     /// <summary>
+    /// RF-201 — Segunda barreira antes da rede: quando o serviço NÃO é o banco de dados
+    /// local, a chamada ao tradutor só ocorre se o texto for diferente do anterior.
+    ///
+    /// A primeira barreira é a detecção de mudança do laço (RF-192), que compara o texto
+    /// RECONHECIDO. Esta compara o texto TRATADO, que é o que de fato seria enviado — e os
+    /// dois diferem: o tratamento textual (RF-180 a RF-191) colapsa variações que o OCR
+    /// produz e o dicionário corrige, então um texto reconhecido diferente pode virar um
+    /// texto tratado idêntico. Sem a segunda barreira, cada tremida do OCR viraria uma
+    /// requisição de rede.
+    ///
+    /// Com o banco de dados local a barreira não se aplica: não há rede a poupar, e a
+    /// consulta é mais barata que a comparação.
+    /// </summary>
+    public bool ServiceIsLocalDatabase { get; set; }
+
+    private string _lastSentToNetwork = "";
+
+    /// <summary>
     /// RF-240 — "Ignorar tradução vazia": um resultado vazio não substitui a tradução
     /// anterior na tela. O pipeline apenas sinaliza; quem decide não desenhar é a janela.
     /// </summary>
@@ -99,10 +117,28 @@ public sealed class TranslationPipeline : IDisposable
             request.Append('\n');
         }
 
+        string payload = request.ToString();
+
+        // RF-201 — a SEGUNDA barreira antes da rede: com serviço que não é o banco local, a
+        // chamada só sai se o que seria enviado for diferente do que já foi. As traduções
+        // conhecidas já foram preenchidas acima; devolvê-las sem a chamada é exatamente o
+        // que o requisito quer.
+        if (!ServiceIsLocalDatabase && payload == _lastSentToNetwork)
+        {
+            return new BatchTranslation
+            {
+                Translations = translations,
+                Combined = Combine(sources, translations),
+                NetworkCount = 0,
+            };
+        }
+
+        _lastSentToNetwork = ServiceIsLocalDatabase ? "" : payload;
+
         TranslationOutcome outcome;
         try
         {
-            outcome = await service.TranslateAsync(request.ToString(), context, cancellation)
+            outcome = await service.TranslateAsync(payload, context, cancellation)
                                    .ConfigureAwait(false);
         }
         catch (OperationCanceledException)

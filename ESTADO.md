@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        673 testes
+    ├── Gort.Core.Tests/        676 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,10 +36,10 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **o tradutor web sem chave** (RF-254 🔒). 791 testes passando
-(673 + 46 + 40 + 32).
+Último commit: **a segunda barreira antes da rede** (RF-201). 794 testes passando
+(676 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 64**.
+A varredura por requisitos nunca citados no código saiu de **92 para 59**.
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -837,6 +837,29 @@ Três decisões que os testes fixam:
 O `endpoint` está **vazio** nos dados: o endereço depende do fornecedor e não é nosso para
 distribuir. Nesse estado o serviço recusa e explica, em vez de o programa fingir que ele não
 existe.
+
+## RF-201 — a segunda barreira antes da rede
+
+A primeira barreira é a detecção de mudança do laço (RF-192), que compara o texto
+**reconhecido**. Esta compara o que de fato seria **enviado** — e os dois diferem: o
+tratamento textual de RF-180 a RF-191 colapsa variações que o OCR produz e o dicionário
+corrige, então um texto reconhecido diferente pode virar um texto tratado idêntico. Sem a
+segunda barreira, cada tremida do OCR viraria uma requisição de rede.
+
+Com o banco de dados local a barreira não se aplica: não há rede a poupar, e a consulta é
+mais barata que a comparação.
+
+## Dois requisitos que o sistema de layout já cumpre
+
+- **RF-488** — "reposicionar itens de interface após a tradução, porque o texto traduzido tem
+  largura diferente". Aqui não há reposicionamento nenhum, e isso cumpre o requisito: ele
+  descreve o remédio de uma interface de POSIÇÕES ABSOLUTAS, em que trocar o idioma faz um
+  rótulo comprido invadir o controle seguinte. Esta interface é de fluxo — `StackPanel` e
+  `Grid` com espaçamento declarado reposicionam tudo sozinhos, com a folga que o `Spacing`
+  define. Escrever a política à mão por cima só criaria uma segunda verdade.
+- **RF-505** — o mesmo vale para a escala de DPI: o Avalonia mede em unidades independentes
+  de dispositivo, então as abas já nascem com o tamanho certo em qualquer tela. O requisito
+  nomeia um ajuste que só é preciso onde o tamanho é dado em pixels.
 
 ## Decisões registradas
 

@@ -24,6 +24,10 @@ public static class OverlayTextLayout
     /// </summary>
     public static RectD LineBand(RectD content, int index, double advance, Orientation orientation)
     {
+        // RF-376 — no modo vertical as duas direções valem JUNTAS: a escrita desce e as
+        // colunas avançam da direita para a esquerda. É a convenção do japonês vertical, e
+        // aplicar só uma das duas põe a segunda coluna do lado errado — o texto fica
+        // legível linha a linha e ilegível como bloco.
         if (orientation == Orientation.Vertical)
         {
             double right = content.Right - Math.Ceiling(index * advance);

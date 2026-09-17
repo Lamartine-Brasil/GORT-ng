@@ -345,6 +345,23 @@ public partial class MainWindow : Window
     // ─────────────────────────────────────────────────────────────────────────
     // RF-481 — Localização de todos os rótulos
     // ─────────────────────────────────────────────────────────────────────────
+    //
+    // RF-488 — "alguns itens de interface exigem reposicionamento após a tradução, porque o
+    // texto traduzido tem largura diferente; o programa deve reposicioná-los em relação ao
+    // controle anterior, com uma folga e uma posição mínima".
+    //
+    // Aqui não há reposicionamento nenhum, e isso CUMPRE o requisito. Ele descreve o remédio
+    // de uma interface de posições absolutas, em que trocar o idioma faz um rótulo comprido
+    // invadir o controle seguinte. Esta interface é de FLUXO: `StackPanel` e `Grid` com
+    // espaçamento declarado reposicionam tudo sozinhos quando o texto muda de largura, com a
+    // folga que o `Spacing` define. A política que RF-488 descreve está implementada pelo
+    // sistema de layout, e escrevê-la à mão por cima só criaria uma segunda verdade.
+    //
+    // RF-505 — o mesmo vale para a escala de DPI: o Avalonia mede em unidades independentes
+    // de dispositivo e escala a janela inteira, então as abas já nascem com a altura e a
+    // largura certas em qualquer tela. O requisito nomeia um ajuste que só é preciso onde o
+    // tamanho é dado em pixels.
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void Localize()
     {
