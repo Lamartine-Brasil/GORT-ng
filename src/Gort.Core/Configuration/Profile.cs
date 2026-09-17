@@ -178,6 +178,27 @@ public sealed class Profile
     /// RF-043 — Faixas invertidas em um grupo de cor têm início e fim trocados.
     /// Aplicado ao carregar E ao aplicar.
     /// </summary>
+    /// <summary>
+    /// RF-039 — Copia os valores de outro perfil sobre este.
+    ///
+    /// Por reflexão, e não campo a campo: o perfil tem dezenas de propriedades e uma lista
+    /// escrita à mão ficaria desatualizada em silêncio no dia em que alguém acrescentasse
+    /// uma — que é exatamente o tipo de defeito que só aparece meses depois, como "aquela
+    /// opção não sobrevive ao carregar perfil".
+    /// </summary>
+    public void CopyFrom(Profile other)
+    {
+        foreach (var property in typeof(Profile).GetProperties())
+        {
+            if (!property.CanRead || !property.CanWrite) continue;
+            property.SetValue(this, property.GetValue(other));
+        }
+
+        // As coleções são copiadas, não compartilhadas: sem isto os dois perfis passariam a
+        // apontar para a mesma lista, e mexer num mexeria no outro.
+        ColorGroups = other.ColorGroups.Select(g => g.Clone()).ToList();
+    }
+
     public void Normalize()
     {
         Speed = Math.Clamp(Speed, 1, 5);

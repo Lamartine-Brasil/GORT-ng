@@ -417,6 +417,25 @@ public sealed class AppSession : IDisposable
         },
     };
 
+    /// <summary>
+    /// RF-039 — Carregar um perfil: aplicar os valores, normalizar, e SALVAR o perfil
+    /// principal.
+    ///
+    /// A ordem é a do requisito, e o salvamento no fim é o que garante que campos ausentes
+    /// no arquivo carregado fiquem normalizados em disco — senão eles voltariam a faltar na
+    /// abertura seguinte.
+    /// </summary>
+    public void LoadProfile(string path)
+    {
+        var loaded = Profile.Load(path, out _);
+
+        Profile.CopyFrom(loaded);
+        Profile.Normalize();
+
+        ApplyConfiguration();
+        Profile.Save(Paths.MainProfile);
+    }
+
     /// <summary>RF-453 — Os atalhos são gravados no seu arquivo ao aplicar (RF-012).</summary>
     public void SaveShortcuts() => ShortcutStore.Save(Paths.Shortcuts, Shortcuts);
 

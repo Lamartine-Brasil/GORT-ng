@@ -435,3 +435,11 @@ confirm.title,Confirmar
 confirm.yes,Sim
 confirm.no,Não
 msg.no_update_server,"Não há servidor de atualização configurado nesta versão."
+additional.restore_scale,Padrão
+additional.scale_restored,"Ampliação restaurada para {0}x."
+msg.profile_not_set,"Este atalho ainda não tem um perfil associado."
+msg.profile_missing,"O perfil ""{0}"" não foi encontrado."
+msg.profile_loaded,"Perfil ""{0}"" carregado."
+msg.service_not_set,"Este atalho ainda não tem um serviço associado."
+msg.service_missing,"O serviço ""{0}"" não existe mais."
+msg.service_switched,"Serviço de tradução: {0}"

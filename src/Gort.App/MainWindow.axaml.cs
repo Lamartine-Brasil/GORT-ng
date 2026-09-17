@@ -39,6 +39,12 @@ public partial class MainWindow : Window
     private int _quickStep;
     private bool _busy;
 
+    /// <summary>
+    /// Verdadeiro enquanto os controles estão sendo preenchidos a partir do perfil. Os
+    /// manipuladores de mudança conferem isto antes de escrever de volta.
+    /// </summary>
+    private bool _loadingValues;
+
     public MainWindow() : this(AppSession.Create()) { }
 
     public MainWindow(AppSession session)
@@ -145,6 +151,23 @@ public partial class MainWindow : Window
     private void ApplyTrayMode() 
     {
         if (_tray is not null) _tray.IsVisible = _session.Advanced.TrayMode;
+    }
+
+    /// <summary>
+    /// RF-512 — O idioma de OCR escolhido move a seleção de ORIGEM da tradução, quando
+    /// existir um idioma correspondente na tabela.
+    /// </summary>
+    private void FollowOcrLanguage()
+    {
+        // Durante `LoadValues` as listas são preenchidas e a seleção muda sozinha; escrever
+        // no perfil aí sobrescreveria o que acabou de ser lido dele.
+        if (_loadingValues) return;
+        if (SourceBox.SelectedItem is not string key) return;
+
+        // A tabela é quem diz se existe: nenhuma comparação com identificador aqui (RF-567).
+        if (_session.Catalog.Language(key) is null) return;
+
+        _session.Profile.OcrLanguage = key;
     }
 
     private void ShowTrayState()
@@ -297,6 +320,7 @@ public partial class MainWindow : Window
         ActiveWindowCheck.Content = _loc["additional.active_window"];
         ScaleLabel.Text = _loc["additional.scale"];
         AttachedWindowButton.Content = _loc["additional.attached_window"];
+        RestoreScaleButton.Content = _loc["additional.restore_scale"];
         SpeedGroupLabel.Text = _loc["additional.speed"];
         WindowGroupLabel.Text = _loc["additional.window"];
         AlwaysOnTopCheck.Content = _loc["additional.always_on_top"];
@@ -364,6 +388,9 @@ public partial class MainWindow : Window
 
     private void LoadValues()
     {
+        _loadingValues = true;
+        try
+        {
         var p = _session.Profile;
 
         EngineBox.SelectedItem = _session.Engines.Resolve(p.OcrEngine)?.Key;
@@ -417,6 +444,9 @@ public partial class MainWindow : Window
             ToolTip.SetTip(SpeakCheck, _session.Platform.Speech.UnavailableReason);
         }
 
+        // RF-089 — o botão da aba adicional abre o seletor de janelas.
+        AttachedWindowButton.Click += (_, _) => OpenWindowPicker();
+
         // C2/C3 — sem captura de janela anexada, o botão fica desabilitado com explicação.
         if (!_session.Platform.Capabilities.Has(Capability.WindowCapture))
         {
@@ -426,6 +456,11 @@ public partial class MainWindow : Window
         }
 
         UpdateColorButtons();
+        }
+        finally
+        {
+            _loadingValues = false;
+        }
     }
 
     private void WireEvents()
@@ -451,6 +486,38 @@ public partial class MainWindow : Window
         RemoveSpacesCheck.IsCheckedChanged += (_, _) => UpdatePreview();
         UseBackgroundCheck.IsCheckedChanged += (_, _) => UpdatePreview();
         NumberAreasCheck.IsCheckedChanged += (_, _) => UpdatePreview();
+
+        // RF-512 — trocar o IDIOMA DE OCR move automaticamente a seleção de origem, quando
+        // existir o idioma correspondente. Os dois sempre andam juntos na prática — o
+        // usuário não quer reconhecer japonês e traduzir a partir do inglês —, e deixar a
+        // segunda escolha para ele é só um jeito de deixá-lo errar.
+        SourceBox.SelectionChanged += (_, _) => FollowOcrLanguage();
+
+        // RF-115 — restaurar o fator de ampliação ao padrão.
+        RestoreScaleButton.Click += (_, _) =>
+        {
+            ScaleBox.Value = (decimal)Gort.Core.Calibration.P.DefaultScale;
+            Say(_loc.Format("additional.scale_restored",
+                            Gort.Core.Calibration.P.DefaultScale));
+        };
+
+        // RF-502 — a janela principal é arrastável por qualquer área vazia do corpo, e não
+        // só pela barra de título. Quem usa o programa com um jogo aberto precisa tirá-la
+        // da frente depressa, e mirar a barra de título é o gesto mais lento que há.
+        PointerPressed += (_, e) =>
+        {
+            if (e.Source is not Control source) return;
+
+            // Um arraste que comece sobre um controle é do controle, não da janela: sem
+            // isto, arrastar o cursor de um deslizante moveria a janela inteira.
+            if (source is Button or CheckBox or RadioButton or ComboBox or TextBox
+                       or NumericUpDown or Slider or ListBox or TabItem)
+            {
+                return;
+            }
+
+            if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
+        };
 
         // RF-490 — o modo de depuração é revelado por um controle escondido: um clique
         // longo no título.
@@ -1403,7 +1470,90 @@ public partial class MainWindow : Window
             case ShortcutAction.OpenDictionaryEditor:
                 OpenDictionaryEditor();
                 break;
+
+            case ShortcutAction.OpenProfile:
+                OpenProfileFromShortcut(action);
+                break;
+
+            case ShortcutAction.SwitchTranslationService:
+                SwitchServiceFromShortcut(action);
+                break;
+
+            case ShortcutAction.ToggleForcedTransparency:
+                if (_translationWindow is LayerTranslationWindow layer)
+                    layer.ForcedTransparency = !layer.ForcedTransparency;
+                break;
         }
+    }
+
+    /// <summary>
+    /// RF-449 — Se o atalho de abrir perfil apontar para um arquivo INEXISTENTE, o programa
+    /// exibe uma mensagem NOMEANDO o arquivo faltante.
+    ///
+    /// Nomear importa: são quatro atalhos de perfil, e "o arquivo não existe" não diz qual
+    /// dos quatro está mal configurado.
+    /// </summary>
+    private void OpenProfileFromShortcut(ShortcutAction action)
+    {
+        string? file = _session.Shortcuts.Find(action)?.Data;
+
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            Say("msg.profile_not_set");
+            return;
+        }
+
+        string path = Path.IsPathRooted(file)
+            ? file
+            : Path.Combine(_session.Paths.ProfilesDirectory, file);
+
+        if (!File.Exists(path))
+        {
+            Say(_loc.Format("msg.profile_missing", Path.GetFileName(path)));
+            return;
+        }
+
+        var result = _loop.PauseAndResume(() =>
+        {
+            _session.LoadProfile(path);
+            LoadValues();
+        });
+
+        if (result == ApplyResult.Aborted) { Say("msg.loop_stop_failed"); return; }
+
+        Say(_loc.Format("msg.profile_loaded", Path.GetFileNameWithoutExtension(path)));
+    }
+
+    /// <summary>
+    /// RF-448 — Trocar de serviço por atalho: parar a tradução se estiver rodando, aplicar o
+    /// novo serviço, atualizar a interface, salvar o perfil, exibir uma notificação NA
+    /// JANELA DE TRADUÇÃO, e retomar se estava rodando.
+    ///
+    /// A notificação vai para a janela de tradução, e não só para a janela principal: quem
+    /// usa o atalho está com o jogo à frente, e não veria um aviso na janela que está atrás.
+    /// </summary>
+    private void SwitchServiceFromShortcut(ShortcutAction action)
+    {
+        string? key = _session.Shortcuts.Find(action)?.Data;
+        if (string.IsNullOrWhiteSpace(key)) { Say("msg.service_not_set"); return; }
+
+        var info = _session.Catalog.Service(key);
+        if (info is null) { Say(_loc.Format("msg.service_missing", key)); return; }
+
+        var result = _loop.PauseAndResume(() =>
+        {
+            _session.Profile.TranslationService = info.Key;
+            _session.ApplyConfiguration();
+            _session.SaveProfile();
+        });
+
+        if (result == ApplyResult.Aborted) { Say("msg.loop_stop_failed"); return; }
+
+        LoadValues();
+
+        string message = _loc.Format("msg.service_switched", info.Key);
+        Say(message);
+        _translationWindow?.Show(message, "");
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1797,7 +1947,13 @@ public partial class MainWindow : Window
 
         // RF-071 — ao iniciar uma tradução não instantânea, a memória do último instantâneo
         // é apagada.
+        //
+        // RF-072 — e se ela EXISTIA, as áreas são recalculadas antes de começar: a lista de
+        // captura montada com o instantâneo presente tem outro conteúdo (RF-070), e o
+        // primeiro ciclo leria os retângulos do instantâneo que acabou de ser descartado.
+        bool tinhaInstantaneo = _session.Regions.LastSnapshot is not null;
         _session.Regions.ForgetLastSnapshot();
+        if (tinhaInstantaneo) _session.Regions.Build();
 
         if (!_loop.Start(LoopMode.Realtime)) { Say("msg.loop_stop_failed"); return; }
         ShowLoopState();

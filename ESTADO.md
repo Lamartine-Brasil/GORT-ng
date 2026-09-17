@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        661 testes
+    ├── Gort.Core.Tests/        663 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,8 +36,8 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **o ícone de bandeja** (RF-015 a RF-019). 779 testes passando
-(661 + 46 + 40 + 32).
+Último commit: **dez requisitos pequenos que nunca tinham sido escritos**.
+781 testes passando (663 + 46 + 40 + 32).
 
 O que resta depende de coisas de fora desta máquina:
 
@@ -731,6 +731,29 @@ encerra nada.
   deixaria sem os controles que ele usa durante a partida.
 
 Verificado na máquina: o ícone aparece na barra de menus do macOS.
+
+## Uma varredura por requisitos nunca citados
+
+`grep` dos 578 identificadores de requisito contra o código encontrou 92 que nunca apareciam
+em lugar nenhum. Nem todos são lacuna — alguns descrevem serviços que dependem de
+credenciais —, mas boa parte era trabalho simplesmente não feito. Desta leva:
+
+- **RF-039** — carregar perfil aplica, normaliza e SALVA o principal. A cópia é por reflexão,
+  e um teste guarda a promessa: toda propriedade gravável é copiada, e as coleções são
+  copiadas e não compartilhadas.
+- **RF-072** — se havia memória de último instantâneo, as áreas são recalculadas antes de
+  começar: a lista montada com o instantâneo presente tem outro conteúdo (RF-070), e o
+  primeiro ciclo leria retângulos que acabaram de ser descartados.
+- **RF-115** — botão de restaurar a ampliação ao padrão.
+- **RF-448** — troca de serviço por atalho, com a notificação indo para a JANELA DE TRADUÇÃO:
+  quem usa o atalho está com o jogo à frente e não veria um aviso na janela que está atrás.
+- **RF-449** — o perfil inexistente é NOMEADO na mensagem. São quatro atalhos de perfil, e
+  "o arquivo não existe" não diz qual dos quatro está mal configurado.
+- **RF-502** — a janela principal arrasta por qualquer área vazia. Um arraste que comece
+  sobre um controle é do controle: sem essa distinção, arrastar o cursor de um deslizante
+  moveria a janela inteira.
+- **RF-512** — trocar o idioma de OCR move a seleção de origem. Os dois sempre andam juntos
+  na prática, e deixar a segunda escolha para o usuário é só um jeito de deixá-lo errar.
 
 ## Decisões registradas
 
