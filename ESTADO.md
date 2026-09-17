@@ -27,7 +27,7 @@ Gort.sln
 │   ├── Gort.LayerProbe/        desenho da camada e da sobreposição, fora da tela
 │   └── Gort.OptionsProbe/      as abas de V.3 e as janelas de V.4, fora da tela
 └── tests/
-    ├── Gort.Core.Tests/        664 testes
+    ├── Gort.Core.Tests/        673 testes
     ├── Gort.Platform.Tests/     46 testes
     ├── Gort.Ocr.Tests/          40 testes
     ├── Gort.Engine.Tests/       24 testes
@@ -36,14 +36,14 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **compartilhar configuração, conta-gotas por área e três citações**.
-782 testes passando (664 + 46 + 40 + 32).
+Último commit: **o tradutor web sem chave** (RF-254 🔒). 791 testes passando
+(673 + 46 + 40 + 32).
 
-A varredura por requisitos nunca citados no código saiu de **92 para 66**.
+A varredura por requisitos nunca citados no código saiu de **92 para 64**.
 
 O que resta depende de coisas de fora desta máquina:
 
-- **Oito dos nove serviços de tradução** (RF-249 a RF-291) — credenciais que só o usuário
+- **Sete dos nove serviços de tradução** (RF-255 a RF-291) — credenciais que só o usuário
   tem, ou autenticação por delegação. O rodízio de chaves, os presets, o protocolo de lote e
   a API personalizada já existem; falta o adaptador de cada um.
 - **Atualização automática** — RF-416 a RF-435: servidor de distribuição.
@@ -812,6 +812,31 @@ recebe salva como `.gort` e carrega sem conversão nenhuma.
 
 O que é compartilhado é o que está NA TELA, não o último aplicado: quem acabou de ajustar um
 valor espera compartilhar esse ajuste.
+
+## O tradutor web sem chave (RF-254 🔒)
+
+O segundo serviço que dá para construir sem credencial: faz POST a um endereço público com
+cabeçalhos de navegador.
+
+O requisito manda esperar um intervalo **aleatório** entre 0 e P-56 depois de cada
+requisição, e o motivo está na letra dele — "espaçar as chamadas reduz bloqueio por
+comportamento automatizado". O que denuncia um programa não é a frequência, é a
+**regularidade**: requisições a cada exatos 300 ms não vêm de gente. Por isso o intervalo é
+sorteado e não fixo, e por isso ele é 🔒.
+
+Três decisões que os testes fixam:
+
+- **O espaçamento é antes da requisição, não depois.** Esperar depois faria a primeira
+  chamada de uma rajada sair sem intervalo nenhum — justamente a que chama atenção.
+- **O intervalo é sorteado mesmo quando a requisição falha.** Uma falha seguida de
+  retentativa imediata é o padrão mais automatizado que existe.
+- **Os cabeçalhos vêm dos dados.** Eles mudam com o tempo e sem aviso; embutidos no código,
+  envelheceriam dentro do executável e atualizá-los exigiria uma versão nova para o que é uma
+  linha de configuração.
+
+O `endpoint` está **vazio** nos dados: o endereço depende do fornecedor e não é nosso para
+distribuir. Nesse estado o serviço recusa e explica, em vez de o programa fingir que ele não
+existe.
 
 ## Decisões registradas
 

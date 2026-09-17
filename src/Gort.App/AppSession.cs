@@ -286,6 +286,11 @@ public sealed class AppSession : IDisposable
         if (key == "webfree" && Catalog.FreeWebTranslator is not null)
             return new FreeWebTranslator(Catalog.FreeWebTranslator);
 
+        // RF-254 — o tradutor web sem chave. Com `endpoint` vazio nos dados ele se recusa e
+        // explica, em vez de o programa fingir que o serviço não existe.
+        if (key == "webfree_kr" && Catalog.KeylessWebTranslator is not null)
+            return new KeylessWebTranslator(Catalog.KeylessWebTranslator);
+
         // VI.5 — a API personalizada é o único serviço da PARTE VI que não depende de
         // credencial de terceiro: quem fornece o endereço é o usuário.
         if (key == "customapi")

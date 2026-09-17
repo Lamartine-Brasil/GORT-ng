@@ -209,6 +209,35 @@ separator_token = "//////"     # P-51
 # qualidade ao receber 429.
 # ═══════════════════════════════════════════════════════════════════════════
 
+# ─────────────────────────────────────────────────────────────────────────────
+# RF-254 — Tradutor web SEM CHAVE do mesmo fornecedor do serviço comercial.
+#
+# Os cabeçalhos de navegador vêm daqui porque mudam com o tempo e sem aviso: um valor
+# embutido no código envelheceria dentro do executável, e atualizá-lo exigiria uma versão
+# nova para o que é uma linha de configuração.
+#
+# `endpoint` vazio DESABILITA o serviço, que é o estado desta versão: o endereço depende do
+# fornecedor e não é nosso para distribuir.
+# ─────────────────────────────────────────────────────────────────────────────
+[webfree_keyless]
+endpoint = ""
+text_field = "text"
+result_field = "result"
+source_field = "source"
+target_field = "target"
+
+[[webfree_keyless.header]]
+name = "User-Agent"
+value = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+
+[[webfree_keyless.header]]
+name = "Accept"
+value = "application/json, text/plain, */*"
+
+[[webfree_keyless.header]]
+name = "Accept-Language"
+value = "pt-BR,pt;q=0.9,en;q=0.8"
+
 [webfree]
 endpoint = "https://translate.googleapis.com/translate_a/single"
 client_high_quality = "gtx"

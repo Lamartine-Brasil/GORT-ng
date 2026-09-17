@@ -30,10 +30,12 @@ public sealed class AppCatalog
         IReadOnlyList<string> fontFallbacks,
         IReadOnlyDictionary<string, string> links,
         ModernOcrModels? modernOcrModels,
-        Translation.Services.FreeWebTranslatorOptions? freeWebTranslator)
+        Translation.Services.FreeWebTranslatorOptions? freeWebTranslator,
+        Translation.Services.KeylessWebTranslatorOptions? keylessWebTranslator = null)
     {
         ModernOcrModels = modernOcrModels;
         FreeWebTranslator = freeWebTranslator;
+        KeylessWebTranslator = keylessWebTranslator;
         Languages = languages;
         OcrEngines = engines;
         TranslationServices = services;
@@ -77,6 +79,9 @@ public sealed class AppCatalog
     /// embutido no código.
     /// </summary>
     public Translation.Services.FreeWebTranslatorOptions? FreeWebTranslator { get; }
+
+    /// <summary>RF-254 — Opções do tradutor web sem chave.</summary>
+    public Translation.Services.KeylessWebTranslatorOptions? KeylessWebTranslator { get; }
 
     /// <summary>RF-387 — Lista de reserva de famílias de fonte.</summary>
     public IReadOnlyList<string> FontFallbacks { get; }
@@ -182,6 +187,7 @@ public sealed class AppCatalog
         LlmCatalog? llm = null;
         ModernOcrModels? modernModels = null;
         Translation.Services.FreeWebTranslatorOptions? freeWeb = null;
+        Translation.Services.KeylessWebTranslatorOptions? keylessWeb = null;
         var fonts = new List<string>();
         var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -306,6 +312,34 @@ public sealed class AppCatalog
                 }
             }
 
+            // RF-254 — o tradutor web SEM CHAVE, com os cabeçalhos de navegador vindos dos
+            // dados: eles mudam com o tempo e sem aviso, e embuti-los no código faria
+            // atualizá-los exigir uma versão nova.
+            if (engTable.TryGetValue("webfree_keyless", out var kw) && kw is TomlTable kwt)
+            {
+                var headers = new List<(string, string)>();
+
+                if (kwt.TryGetValue("header", out var hs) && hs is TomlTableArray hta)
+                {
+                    foreach (var h in hta)
+                    {
+                        string? name = GetString(h, "name");
+                        string? value = GetString(h, "value");
+                        if (name is not null && value is not null) headers.Add((name, value));
+                    }
+                }
+
+                keylessWeb = new Translation.Services.KeylessWebTranslatorOptions
+                {
+                    Endpoint = GetString(kwt, "endpoint") ?? "",
+                    Headers = headers,
+                    TextField = GetString(kwt, "text_field") ?? "text",
+                    ResultField = GetString(kwt, "result_field") ?? "result",
+                    SourceField = GetString(kwt, "source_field") ?? "source",
+                    TargetField = GetString(kwt, "target_field") ?? "target",
+                };
+            }
+
             if (engTable.TryGetValue("fonts", out var f) && f is TomlTable ft)
                 fonts.AddRange(GetStringList(ft, "fallback"));
 
@@ -327,7 +361,8 @@ public sealed class AppCatalog
         };
 
         return new AppCatalog(languages, engines, services, defaultTarget, defaultService,
-                              bridgeLanguage, llm, fonts, links, modernModels, freeWeb);
+                              bridgeLanguage, llm, fonts, links, modernModels, freeWeb,
+                              keylessWeb);
     }
 
     private static TomlTable? TryRead(string path, Action<string>? log)
