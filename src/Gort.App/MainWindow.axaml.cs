@@ -87,6 +87,141 @@ public partial class MainWindow : Window
         RememberMonitorLayout();
 
         StartMouseFollow();
+        SetUpTray();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // C13 / RF-015 a RF-019 — Ícone de bandeja
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private TrayMenu? _tray;
+
+    /// <summary>RF-015 — Verdadeiro enquanto o encerramento de verdade está em curso.</summary>
+    private bool _quitting;
+
+    private void SetUpTray()
+    {
+        // C13 — onde a bandeja não existe, o programa segue sem ela: a janela principal e o
+        // controle remoto já dão acesso a tudo (6.4, degradação).
+        if (!_session.Platform.Capabilities.Has(Capability.TrayIcon)) return;
+
+        _tray = new TrayMenu(_loc)
+        {
+            OpenSettings = RestoreMainWindow,
+            ShowTranslationWindow = ShowTranslationWindow,
+            ShowRemote = () => { _remote?.Show(); _remote?.Activate(); },
+
+            ToggleAlwaysOnTop = value =>
+            {
+                _session.Options.TranslationWindowAlwaysOnTop = value;
+                _translationWindow?.SetAlwaysOnTop(value);
+            },
+
+            ToggleDictionary = value =>
+            {
+                _session.Profile.UseDictionary = value;
+                UseDictionaryCheck.IsChecked = value;
+            },
+
+            DefineArea = OpenAreaManager,
+            ToggleLoop = ToggleLoop,
+            SaveProfile = () => { _session.SaveProfile(); Say("msg.applied"); },
+            LoadProfile = RestoreMainWindow,
+            RestoreDefaults = RestoreDefaults,
+            About = OpenAbout,
+            CheckUpdates = () => Say("msg.no_update_server"),
+            Quit = Quit,
+        };
+
+        _tray.IsVisible = _session.Advanced.TrayMode;
+        ShowTrayState();
+    }
+
+    /// <summary>RF-018 — O rótulo de iniciar/parar reflete o estado do laço.</summary>
+    /// <summary>
+    /// RF-531 — Aplicar as opções avançadas vale SEM REINICIAR, e o modo bandeja é uma
+    /// delas: ligar a caixa tem de fazer o ícone aparecer na hora.
+    /// </summary>
+    private void ApplyTrayMode() 
+    {
+        if (_tray is not null) _tray.IsVisible = _session.Advanced.TrayMode;
+    }
+
+    private void ShowTrayState()
+        => _tray?.ShowState(_loop.IsRunning,
+                            _session.Options.TranslationWindowAlwaysOnTop,
+                            _session.Profile.UseDictionary);
+
+    /// <summary>
+    /// RF-019 — Restaura e ATIVA a janela principal, recriando a janela de tradução e o
+    /// controle remoto se necessário.
+    ///
+    /// O "se necessário" é o ponto: no modo bandeja o usuário pode ter fechado as duas, e
+    /// restaurar só a janela principal o deixaria sem os controles que ele usa durante a
+    /// partida.
+    /// </summary>
+    private void RestoreMainWindow()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+
+        if (_remote is null || !_remote.IsVisible)
+        {
+            _remote?.Show();
+            _remote?.Activate();
+        }
+    }
+
+    /// <summary>
+    /// RF-015 — Fechar a janela principal PEDE CONFIRMAÇÃO. Com o modo bandeja ativo,
+    /// apenas oculta a janela e o programa continua rodando.
+    ///
+    /// A confirmação existe porque fechar a janela é o gesto que se faz sem pensar, e aqui
+    /// ele interromperia uma tradução em curso.
+    /// </summary>
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (_quitting) { base.OnClosing(e); return; }
+
+        if (_session.Advanced.TrayMode && _tray is not null)
+        {
+            e.Cancel = true;
+            Hide();
+            return;
+        }
+
+        e.Cancel = true;
+        _ = ConfirmQuitAsync();
+    }
+
+    private async Task ConfirmQuitAsync()
+    {
+        var confirm = new ConfirmWindow(_loc, _loc["tray.close_confirm"]);
+        if (await confirm.AskAsync(this)) Quit();
+    }
+
+    /// <summary>
+    /// RF-016 — Ao encerrar DE FATO: parar o laço, remover o ícone da bandeja e liberar o
+    /// interceptador global de teclado.
+    /// </summary>
+    private void Quit()
+    {
+        _quitting = true;
+
+        try { _loop.Stop(); } catch { /* P8 */ }
+        try { _session.Platform.Keyboard.Stop(); } catch { /* P8 */ }
+
+        _tray?.Dispose();
+        _tray = null;
+
+        Close();
+
+        if (Avalonia.Application.Current?.ApplicationLifetime
+            is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life)
+        {
+            life.Shutdown();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -402,6 +537,9 @@ public partial class MainWindow : Window
         });
 
         if (result == ApplyResult.Aborted) { Say("msg.loop_stop_failed"); return; }
+
+        // RF-531 — o modo bandeja é uma das opções que valem sem reiniciar.
+        ApplyTrayMode();
 
         // O que depende de janelas vivas é reaplicado aqui, fora da pausa.
         _remote?.SetAlwaysOnTop(_session.Advanced.RemoteAlwaysOnTop);
@@ -1791,6 +1929,8 @@ public partial class MainWindow : Window
         // RF-320 — "sempre no topo apenas durante a tradução".
         if (_session.Advanced.AlwaysOnTopOnlyWhileTranslating)
             _translationWindow?.SetAlwaysOnTop(running);
+
+        ShowTrayState();
     }
 
     /// <summary>RF-202 — "Traduzir uma vez": um único ciclo, pelo mesmo caminho.</summary>

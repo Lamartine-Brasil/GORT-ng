@@ -413,3 +413,25 @@ permission.settings,Abrir configuração
 permission.granted,Permissão concedida.
 permission.restart_needed,"O sistema só aplica a permissão a partir da próxima abertura do programa. Conceda na janela que abriu e reinicie o GORT."
 permission.no_settings,"Não há tela de configuração para esta permissão neste sistema."
+
+# ─── C13 / RF-015 a RF-019 — ícone de bandeja ────────────────────────────────
+tray.settings,Abrir configurações
+tray.translation_window,Mostrar janela de tradução
+tray.remote,Mostrar controle remoto
+tray.always_on_top,Janela de tradução sempre no topo
+tray.dictionary,Dicionário de correção
+tray.define_area,Definir área de OCR
+tray.start,Iniciar tradução
+tray.stop,Parar tradução
+tray.save_profile,Salvar perfil
+tray.load_profile,Carregar perfil
+tray.restore_defaults,Restaurar padrões
+tray.about,Sobre
+tray.check_updates,Verificar atualização
+tray.quit,Sair
+tray.close_confirm,"Encerrar o GORT? A tradução em curso será interrompida."
+app.title,Tradutor de tela
+confirm.title,Confirmar
+confirm.yes,Sim
+confirm.no,Não
+msg.no_update_server,"Não há servidor de atualização configurado nesta versão."

@@ -36,7 +36,7 @@ Gort.sln
 
 ## Onde parei — 17 de setembro de 2026
 
-Último commit: **RF-570 — a sugestão dos quadros em branco**. 779 testes passando
+Último commit: **o ícone de bandeja** (RF-015 a RF-019). 779 testes passando
 (661 + 46 + 40 + 32).
 
 O que resta depende de coisas de fora desta máquina:
@@ -710,6 +710,27 @@ porque o jogo está bem visível na tela dele.
 - E sai **antes da detecção de mudança**: um quadro em branco produz texto vazio, que o
   detector trata como mudança e apaga a tela — é exatamente aí que o usuário precisa saber
   por quê.
+
+## O ícone de bandeja (C13, RF-015 a RF-019)
+
+`Advanced.TrayMode` existia como opção e não fazia nada. Agora faz: o programa fica aberto
+durante a partida inteira e a janela principal atrapalha — com a bandeja, fechar a janela não
+encerra nada.
+
+- **O ícone é desenhado, não carregado de arquivo.** Um recurso binário a mais tornaria a
+  compilação dependente de um asset que ninguém revisa e que some sem aviso quando alguém
+  reorganiza pastas. Uma letra num quadrado arredondado é reproduzível em código.
+- **RF-018** — o rótulo de iniciar/parar é atualizado a cada mudança de estado do laço, e não
+  na abertura do menu: o macOS monta o menu nativo na hora de exibi-lo, e não há um evento
+  de "menu vai abrir" que valha nos três sistemas.
+- **RF-015** — fechar a janela pede confirmação, e no botão de RECUSAR está o padrão: fechar
+  a janela é o gesto que se faz sem pensar, e a tecla Enter apertada por reflexo não pode ser
+  o que interrompe uma tradução.
+- **RF-019** — restaurar recria o controle remoto "se necessário". O "se necessário" é o
+  ponto: no modo bandeja o usuário pode ter fechado tudo, e restaurar só a janela principal o
+  deixaria sem os controles que ele usa durante a partida.
+
+Verificado na máquina: o ícone aparece na barra de menus do macOS.
 
 ## Decisões registradas
 
